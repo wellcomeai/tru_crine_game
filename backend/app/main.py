@@ -1,7 +1,7 @@
 from contextlib import asynccontextmanager
 from pathlib import Path
 
-from fastapi import FastAPI, Request
+from fastapi import FastAPI, Request, HTTPException
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse
 from fastapi.middleware.cors import CORSMiddleware
@@ -44,6 +44,10 @@ if frontend_dist.exists():
     @app.get("/{full_path:path}")
     async def serve_spa(request: Request, full_path: str):
         """All non-API paths -> index.html (SPA routing)"""
+        # Never intercept API or images routes
+        if full_path.startswith("api") or full_path.startswith("images"):
+            raise HTTPException(status_code=404, detail="Not found")
+
         file_path = frontend_dist / full_path
         if full_path and file_path.exists() and file_path.is_file():
             return FileResponse(file_path)

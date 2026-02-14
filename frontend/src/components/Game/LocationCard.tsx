@@ -32,6 +32,7 @@ export default function LocationCard({ location, onClick }: LocationCardProps) {
           <img
             src={getImageUrl(location.image)}
             alt={location.name}
+            loading="lazy"
             className="w-full h-full object-cover"
             onError={(e) => {
               (e.target as HTMLImageElement).style.display = 'none';

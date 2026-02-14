@@ -13,28 +13,14 @@ interface AdminCase {
   created_at: string | null;
 }
 
-interface GenerationStep {
-  step: string;
+interface ProgressData {
+  step: number;
+  total: number;
+  message: string;
   status: string;
-}
-
-interface GenerationResult {
-  status: string;
-  steps: GenerationStep[];
   case_id?: string;
   case_slug?: string;
-  errors: string[];
 }
-
-const STEP_LABELS: Record<string, string> = {
-  plot_generation: 'Генерация сюжета',
-  validation: 'Валидация',
-  location_images: 'Изображения локаций',
-  poi_calibration: 'Калибровка POI',
-  avatars: 'Аватары персонажей',
-  evidence_images: 'Изображения улик',
-  database_save: 'Сохранение в БД',
-};
 
 export default function AdminPage() {
   const { isAdmin } = useAuthStore();
@@ -42,7 +28,8 @@ export default function AdminPage() {
 
   const [cases, setCases] = useState<AdminCase[]>([]);
   const [generating, setGenerating] = useState(false);
-  const [generationResult, setGenerationResult] = useState<GenerationResult | null>(null);
+  const [progress, setProgress] = useState<ProgressData | null>(null);
+  const [error, setError] = useState<string | null>(null);
 
   // Form
   const [theme, setTheme] = useState('');
@@ -69,20 +56,62 @@ export default function AdminPage() {
 
   const handleGenerate = async () => {
     setGenerating(true);
-    setGenerationResult(null);
+    setProgress(null);
+    setError(null);
+
     try {
-      const { data } = await api.post('/admin/generate-case', {
-        theme: theme || null,
-        setting: setting || null,
-        difficulty,
-        num_suspects: numSuspects,
+      const token = localStorage.getItem('token');
+      const response = await fetch('/api/admin/generate-case', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          theme: theme || null,
+          setting: setting || null,
+          difficulty,
+          num_suspects: numSuspects,
+        }),
       });
-      setGenerationResult(data);
-      if (data.status === 'completed') {
-        loadCases();
+
+      if (!response.ok) {
+        const errData = await response.json().catch(() => null);
+        throw new Error(errData?.detail || `HTTP ${response.status}`);
       }
-    } catch (err) {
-      setGenerationResult({ status: 'error', steps: [], errors: ['Network error'], case_id: undefined, case_slug: undefined });
+
+      const reader = response.body!.getReader();
+      const decoder = new TextDecoder();
+      let buffer = '';
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+
+        buffer += decoder.decode(value, { stream: true });
+        const lines = buffer.split('\n');
+        buffer = lines.pop() || '';
+
+        for (const line of lines) {
+          if (line.startsWith('data: ')) {
+            try {
+              const data: ProgressData = JSON.parse(line.slice(6));
+              setProgress(data);
+
+              if (data.status === 'completed') {
+                await loadCases();
+              }
+              if (data.status === 'error') {
+                setError(data.message);
+              }
+            } catch {
+              // skip malformed events
+            }
+          }
+        }
+      }
+    } catch (err: any) {
+      setError(err.message || 'Network error');
     } finally {
       setGenerating(false);
     }
@@ -107,6 +136,8 @@ export default function AdminPage() {
       alert('Нельзя удалить опубликованное дело. Сначала снимите с публикации.');
     }
   };
+
+  const progressPercent = progress ? (progress.step / progress.total) * 100 : 0;
 
   return (
     <div className="min-h-screen bg-neutral-950 text-gray-200">
@@ -187,50 +218,44 @@ export default function AdminPage() {
             </button>
           </div>
 
-          {/* Generation progress */}
-          {generationResult && (
+          {/* Progress bar */}
+          {generating && progress && (
+            <div className="mt-4 p-4 bg-neutral-900 border border-neutral-800 rounded-xl">
+              <div className="flex justify-between text-sm text-gray-400 mb-2">
+                <span>{progress.message}</span>
+                <span>{progress.step}/{progress.total}</span>
+              </div>
+              <div className="w-full bg-neutral-700 rounded-full h-3">
+                <div
+                  className="bg-amber-500 h-3 rounded-full transition-all duration-500"
+                  style={{ width: `${progressPercent}%` }}
+                />
+              </div>
+            </div>
+          )}
+
+          {/* Completion / error */}
+          {!generating && progress?.status === 'completed' && (
             <div className="mt-4 bg-neutral-900 border border-neutral-800 rounded-xl p-6">
-              <div className="flex items-center gap-2 mb-4">
-                {generationResult.status === 'completed' ? (
-                  <Check size={18} className="text-green-400" />
-                ) : generationResult.status === 'error' ? (
-                  <X size={18} className="text-red-400" />
-                ) : (
-                  <Loader2 size={18} className="animate-spin text-amber-400" />
-                )}
-                <span className={`text-sm font-medium ${
-                  generationResult.status === 'completed' ? 'text-green-400' :
-                  generationResult.status === 'error' ? 'text-red-400' : 'text-amber-400'
-                }`}>
-                  {generationResult.status === 'completed' ? 'Генерация завершена' :
-                   generationResult.status === 'error' ? 'Ошибка генерации' : 'Генерация...'}
-                </span>
+              <div className="flex items-center gap-2 mb-2">
+                <Check size={18} className="text-green-400" />
+                <span className="text-sm font-medium text-green-400">Генерация завершена</span>
               </div>
-
-              {/* Steps */}
-              <div className="space-y-2">
-                {generationResult.steps.map((step) => (
-                  <div key={step.step} className="flex items-center gap-2 text-sm">
-                    <Check size={14} className="text-green-500" />
-                    <span className="text-gray-400">{STEP_LABELS[step.step] || step.step}</span>
-                  </div>
-                ))}
-              </div>
-
-              {/* Errors */}
-              {generationResult.errors.length > 0 && (
-                <div className="mt-3 space-y-1">
-                  {generationResult.errors.map((err, i) => (
-                    <p key={i} className="text-xs text-red-400">{err}</p>
-                  ))}
-                </div>
-              )}
-
-              {generationResult.case_slug && (
-                <p className="mt-3 text-sm text-gray-500">
-                  Slug: <code className="text-amber-400">{generationResult.case_slug}</code>
+              {progress.case_slug && (
+                <p className="text-sm text-gray-500">
+                  Slug: <code className="text-amber-400">{progress.case_slug}</code>
                 </p>
               )}
+            </div>
+          )}
+
+          {error && (
+            <div className="mt-4 bg-neutral-900 border border-red-900/50 rounded-xl p-6">
+              <div className="flex items-center gap-2 mb-2">
+                <X size={18} className="text-red-400" />
+                <span className="text-sm font-medium text-red-400">Ошибка генерации</span>
+              </div>
+              <p className="text-xs text-red-400">{error}</p>
             </div>
           )}
         </section>
@@ -266,7 +291,7 @@ export default function AdminPage() {
                       )}
                     </td>
                     <td className="px-4 py-3 text-gray-500 text-xs">
-                      {c.created_at ? new Date(c.created_at).toLocaleDateString('ru-RU') : '—'}
+                      {c.created_at ? new Date(c.created_at).toLocaleDateString('ru-RU') : '\u2014'}
                     </td>
                     <td className="px-4 py-3">
                       <div className="flex items-center gap-2">

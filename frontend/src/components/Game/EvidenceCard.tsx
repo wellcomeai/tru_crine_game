@@ -38,6 +38,7 @@ export default function EvidenceCard({ evidence, onClick, compact }: EvidenceCar
           <img
             src={getImageUrl(evidence.image)}
             alt={evidence.name}
+            loading="lazy"
             className="w-full h-full object-cover"
             onError={(e) => {
               (e.target as HTMLImageElement).style.display = 'none';

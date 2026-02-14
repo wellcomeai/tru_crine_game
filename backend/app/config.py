@@ -17,6 +17,13 @@ class Settings(BaseSettings):
     # Images
     IMAGES_BASE_URL: str = ""
 
+    # Cloudflare R2
+    R2_ENDPOINT_URL: str = ""
+    R2_ACCESS_KEY_ID: str = ""
+    R2_SECRET_ACCESS_KEY: str = ""
+    R2_BUCKET_NAME: str = "detective-ai"
+    R2_PUBLIC_URL: str = ""
+
     class Config:
         env_file = ".env"
 

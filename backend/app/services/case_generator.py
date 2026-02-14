@@ -1,7 +1,10 @@
 """
 AI-powered case generation service.
 
-Full pipeline: plot -> validation -> images -> POI calibration -> DB save.
+Full pipeline: plot -> validation -> cover -> location images -> POI calibration
+-> avatars -> evidence images -> DB save.
+
+Images are stored in Cloudflare R2 (when configured) or local filesystem (fallback).
 """
 
 import json
@@ -9,16 +12,18 @@ import logging
 import base64
 import re
 from pathlib import Path
+from typing import AsyncGenerator
 from uuid import UUID
 
 from openai import AsyncOpenAI
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.config import settings
+from app.services.storage import storage
 
 logger = logging.getLogger(__name__)
 
-# Directory for generated images — served via FastAPI StaticFiles
+# Fallback directory for local storage (when R2 is not configured)
 IMAGES_BASE_DIR = Path(__file__).resolve().parent.parent.parent.parent / "images" / "generated"
 
 
@@ -29,7 +34,36 @@ class CaseGenerator:
         self.client = AsyncOpenAI(api_key=settings.OPENAI_API_KEY)
 
     # ─────────────────────────────────────────────
-    # PUBLIC: full pipeline
+    # Helper: store image (R2 or local)
+    # ─────────────────────────────────────────────
+
+    async def _store_image(
+        self,
+        image_bytes: bytes,
+        key: str,
+        local_rel_path: str,
+        max_width: int = 1200,
+        max_height: int = 900,
+        quality: int = 82,
+    ) -> str:
+        """
+        Store image in R2 (if configured) or local filesystem.
+        Returns public URL (R2) or relative path (local).
+        """
+        if storage.enabled:
+            return await storage.upload_image(
+                image_bytes, key,
+                max_width=max_width, max_height=max_height, quality=quality,
+            )
+        else:
+            # Fallback: save to local filesystem
+            full_path = IMAGES_BASE_DIR.parent / local_rel_path
+            full_path.parent.mkdir(parents=True, exist_ok=True)
+            full_path.write_bytes(image_bytes)
+            return local_rel_path
+
+    # ─────────────────────────────────────────────
+    # PUBLIC: full pipeline (non-streaming, legacy)
     # ─────────────────────────────────────────────
 
     async def generate_full_case(
@@ -43,75 +77,20 @@ class CaseGenerator:
         result = {"status": "in_progress", "steps": [], "errors": []}
 
         try:
-            # Step 1: Plot
-            logger.info("Step 1/7: Generating plot...")
-            case_data = await self._generate_plot(theme, difficulty, num_suspects, setting)
-            result["steps"].append({"step": "plot_generation", "status": "done"})
-
-            # Step 2: Validation
-            logger.info("Step 2/7: Validating...")
-            errors = self._validate_case_data(case_data)
-            if errors:
-                logger.warning(f"Validation failed: {errors}")
-                case_data = await self._fix_plot(case_data, errors)
-                errors = self._validate_case_data(case_data)
-                if errors:
+            async for progress in self.generate_full_case_with_progress(
+                db=db, theme=theme, difficulty=difficulty,
+                num_suspects=num_suspects, setting=setting,
+            ):
+                if progress.get("status") == "in_progress":
+                    step_name = progress.get("step_name", f"step_{progress.get('step', '?')}")
+                    result["steps"].append({"step": step_name, "status": "done"})
+                elif progress.get("status") == "completed":
+                    result["status"] = "completed"
+                    result["case_id"] = progress.get("case_id", "")
+                    result["case_slug"] = progress.get("case_slug", "")
+                elif progress.get("status") == "error":
                     result["status"] = "error"
-                    result["errors"] = errors
-                    return result
-            result["steps"].append({"step": "validation", "status": "done"})
-
-            case_slug = case_data["case"]["slug"]
-
-            # Create directories
-            for subdir in ["locations", "characters", "evidence"]:
-                (IMAGES_BASE_DIR / case_slug / subdir).mkdir(parents=True, exist_ok=True)
-
-            # Step 3: Location images
-            logger.info("Step 3/7: Generating location images...")
-            for loc_data in case_data["locations"]:
-                img_path = await self._generate_location_image(loc_data, case_slug)
-                loc_data["image"] = img_path
-            result["steps"].append({"step": "location_images", "status": "done"})
-
-            # Step 4: POI calibration
-            logger.info("Step 4/7: Calibrating POI positions...")
-            for loc_data in case_data["locations"]:
-                if loc_data.get("points_of_interest") and loc_data.get("image"):
-                    full_path = IMAGES_BASE_DIR.parent / loc_data["image"]
-                    if full_path.exists():
-                        loc_data["points_of_interest"] = await self._calibrate_pois(
-                            str(full_path),
-                            loc_data["points_of_interest"],
-                            loc_data["name"],
-                            loc_data["description"],
-                        )
-            result["steps"].append({"step": "poi_calibration", "status": "done"})
-
-            # Step 5: Character avatars
-            logger.info("Step 5/7: Generating character avatars...")
-            for char_data in case_data["characters"]:
-                avatar_path = await self._generate_avatar(char_data, case_slug)
-                char_data["avatar"] = avatar_path
-            result["steps"].append({"step": "avatars", "status": "done"})
-
-            # Step 6: Evidence images (key evidence only)
-            logger.info("Step 6/7: Generating evidence images...")
-            key_evidence_slugs = case_data["case"]["solution"].get("key_evidence", [])
-            for ev_data in case_data["evidence"]:
-                if ev_data["slug"] in key_evidence_slugs:
-                    ev_img = await self._generate_evidence_image(ev_data, case_slug)
-                    ev_data["image"] = ev_img
-            result["steps"].append({"step": "evidence_images", "status": "done"})
-
-            # Step 7: Save to DB
-            logger.info("Step 7/7: Saving to database...")
-            case_id = await self._save_to_database(case_data, db)
-            result["steps"].append({"step": "database_save", "status": "done"})
-
-            result["status"] = "completed"
-            result["case_id"] = str(case_id)
-            result["case_slug"] = case_slug
+                    result["errors"].append(progress.get("message", "Unknown error"))
 
         except Exception as e:
             logger.exception("Case generation failed")
@@ -119,6 +98,120 @@ class CaseGenerator:
             result["errors"].append(str(e))
 
         return result
+
+    # ─────────────────────────────────────────────
+    # PUBLIC: full pipeline with progress (SSE)
+    # ─────────────────────────────────────────────
+
+    async def generate_full_case_with_progress(
+        self,
+        db: AsyncSession,
+        theme: str | None = None,
+        difficulty: str = "medium",
+        num_suspects: int = 4,
+        setting: str | None = None,
+    ) -> AsyncGenerator[dict, None]:
+        """Generate case with step-by-step progress updates."""
+
+        total_steps = 8
+
+        # Step 1: Plot generation
+        yield {"step": 1, "total": total_steps, "step_name": "plot_generation",
+               "message": "Генерация сюжета...", "status": "in_progress"}
+        logger.info("Step 1/%d: Generating plot...", total_steps)
+        case_data = await self._generate_plot(theme, difficulty, num_suspects, setting)
+
+        # Step 2: Validation
+        yield {"step": 2, "total": total_steps, "step_name": "validation",
+               "message": "Валидация сюжета...", "status": "in_progress"}
+        logger.info("Step 2/%d: Validating...", total_steps)
+        errors = self._validate_case_data(case_data)
+        if errors:
+            logger.warning("Validation failed: %s", errors)
+            case_data = await self._fix_plot(case_data, errors)
+            errors = self._validate_case_data(case_data)
+            if errors:
+                yield {"status": "error", "message": f"Validation failed: {'; '.join(errors)}"}
+                return
+
+        case_slug = case_data["case"]["slug"]
+
+        # Ensure local directories exist (for fallback)
+        if not storage.enabled:
+            for subdir in ["locations", "characters", "evidence"]:
+                (IMAGES_BASE_DIR / case_slug / subdir).mkdir(parents=True, exist_ok=True)
+
+        # Step 3: Cover image
+        yield {"step": 3, "total": total_steps, "step_name": "cover_image",
+               "message": "Создание обложки дела...", "status": "in_progress"}
+        logger.info("Step 3/%d: Generating cover image...", total_steps)
+        cover_url = await self._generate_cover_image(case_data["case"], case_slug)
+        case_data["case"]["cover_image"] = cover_url
+
+        # Step 4: Location images + POI calibration
+        locations = case_data["locations"]
+        # We store raw image bytes in memory for POI calibration
+        location_image_bytes: dict[str, bytes] = {}
+        for i, loc_data in enumerate(locations):
+            yield {"step": 4, "total": total_steps, "step_name": "location_images",
+                   "message": f"Генерация фото локаций ({i + 1}/{len(locations)})...",
+                   "status": "in_progress"}
+            logger.info("Step 4/%d: Location image %d/%d (%s)...",
+                        total_steps, i + 1, len(locations), loc_data["slug"])
+            img_path, img_bytes = await self._generate_location_image(loc_data, case_slug)
+            loc_data["image"] = img_path
+            if img_bytes:
+                location_image_bytes[loc_data["slug"]] = img_bytes
+
+        # Step 5: POI calibration
+        yield {"step": 5, "total": total_steps, "step_name": "poi_calibration",
+               "message": "Калибровка точек интереса...", "status": "in_progress"}
+        logger.info("Step 5/%d: Calibrating POI positions...", total_steps)
+        for loc_data in locations:
+            if loc_data.get("points_of_interest") and loc_data.get("image"):
+                raw_bytes = location_image_bytes.get(loc_data["slug"])
+                if raw_bytes:
+                    loc_data["points_of_interest"] = await self._calibrate_pois_from_bytes(
+                        raw_bytes,
+                        loc_data["points_of_interest"],
+                        loc_data["name"],
+                        loc_data["description"],
+                    )
+        # Free memory
+        location_image_bytes.clear()
+
+        # Step 6: Character avatars
+        characters = case_data["characters"]
+        for i, char_data in enumerate(characters):
+            yield {"step": 6, "total": total_steps, "step_name": "avatars",
+                   "message": f"Генерация аватаров ({i + 1}/{len(characters)})...",
+                   "status": "in_progress"}
+            logger.info("Step 6/%d: Avatar %d/%d (%s)...",
+                        total_steps, i + 1, len(characters), char_data["slug"])
+            avatar_path = await self._generate_avatar(char_data, case_slug)
+            char_data["avatar"] = avatar_path
+
+        # Step 7: Evidence images (key evidence only)
+        key_evidence_slugs = case_data["case"]["solution"].get("key_evidence", [])
+        key_evidence_items = [ev for ev in case_data["evidence"] if ev["slug"] in key_evidence_slugs]
+        for i, ev_data in enumerate(key_evidence_items):
+            yield {"step": 7, "total": total_steps, "step_name": "evidence_images",
+                   "message": f"Генерация фото улик ({i + 1}/{len(key_evidence_items)})...",
+                   "status": "in_progress"}
+            logger.info("Step 7/%d: Evidence image %d/%d (%s)...",
+                        total_steps, i + 1, len(key_evidence_items), ev_data["slug"])
+            ev_img = await self._generate_evidence_image(ev_data, case_slug)
+            ev_data["image"] = ev_img
+
+        # Step 8: Save to database
+        yield {"step": 8, "total": total_steps, "step_name": "database_save",
+               "message": "Сохранение в базу данных...", "status": "in_progress"}
+        logger.info("Step 8/%d: Saving to database...", total_steps)
+        case_id = await self._save_to_database(case_data, db)
+
+        yield {"step": 8, "total": total_steps, "status": "completed",
+               "message": "Дело успешно создано!",
+               "case_id": str(case_id), "case_slug": case_slug}
 
     # ─────────────────────────────────────────────
     # STEP 1: Plot generation
@@ -339,7 +432,7 @@ Slugs и id — на латинице (snake_case).
 
         char_slugs = [c["slug"] for c in data["characters"]]
         ev_slugs = [e["slug"] for e in data["evidence"]]
-        loc_slugs = [l["slug"] for l in data["locations"]]
+        loc_slugs = [loc["slug"] for loc in data["locations"]]
 
         guilty = solution.get("guilty")
         if guilty and guilty not in char_slugs:
@@ -367,7 +460,7 @@ Slugs и id — на латинице (snake_case).
             if conn["evidence_b_slug"] not in ev_slugs:
                 errors.append(f"Connection evidence_b '{conn['evidence_b_slug']}' not found")
 
-        initial = [l for l in data["locations"] if l.get("is_initial")]
+        initial = [loc for loc in data["locations"] if loc.get("is_initial")]
         if not initial:
             errors.append("No initial location (is_initial=true)")
 
@@ -432,10 +525,50 @@ Slugs и id — на латинице (snake_case).
         return json.loads(raw)
 
     # ─────────────────────────────────────────────
-    # STEP 3: Location images
+    # STEP 3: Cover image
     # ─────────────────────────────────────────────
 
-    async def _generate_location_image(self, loc_data: dict, case_slug: str) -> str:
+    async def _generate_cover_image(self, case_info: dict, case_slug: str) -> str:
+        prompt = f"""Атмосферная обложка для детективной игры.
+
+Название дела: {case_info['title']}
+Краткое описание: {case_info.get('description', '')}
+
+Стиль: кинематографичный, тёмный нуар, драматичное освещение.
+Должна передавать атмосферу тайны и расследования.
+Формат: горизонтальный, соотношение 16:9.
+БЕЗ текста и надписей на изображении."""
+
+        try:
+            response = await self.client.images.generate(
+                model="gpt-image-1",
+                prompt=prompt,
+                n=1,
+                size="1536x1024",
+                quality="high",
+            )
+
+            image_b64 = response.data[0].b64_json
+            image_bytes = base64.b64decode(image_b64)
+
+            key = f"cases/{case_slug}/cover.webp"
+            local_rel = f"generated/{case_slug}/cover.png"
+
+            return await self._store_image(
+                image_bytes, key, local_rel,
+                max_width=1200, max_height=675, quality=85,
+            )
+
+        except Exception as e:
+            logger.error("Failed to generate cover image for %s: %s", case_slug, e)
+            return ""
+
+    # ─────────────────────────────────────────────
+    # STEP 4: Location images
+    # ─────────────────────────────────────────────
+
+    async def _generate_location_image(self, loc_data: dict, case_slug: str) -> tuple[str, bytes | None]:
+        """Generate location image. Returns (stored_path, raw_bytes_for_calibration)."""
         pois = loc_data.get("points_of_interest", [])
         poi_descriptions = []
         for poi in pois:
@@ -470,17 +603,15 @@ Slugs и id — на латинице (snake_case).
             image_b64 = response.data[0].b64_json
             image_bytes = base64.b64decode(image_b64)
 
-            filename = f"{loc_data['slug']}.png"
-            rel_path = f"generated/{case_slug}/locations/{filename}"
-            full_path = IMAGES_BASE_DIR / case_slug / "locations" / filename
-            full_path.parent.mkdir(parents=True, exist_ok=True)
-            full_path.write_bytes(image_bytes)
+            key = f"cases/{case_slug}/locations/{loc_data['slug']}.webp"
+            local_rel = f"generated/{case_slug}/locations/{loc_data['slug']}.png"
 
-            return rel_path
+            stored_path = await self._store_image(image_bytes, key, local_rel)
+            return stored_path, image_bytes
 
         except Exception as e:
-            logger.error(f"Failed to generate image for {loc_data['slug']}: {e}")
-            return ""
+            logger.error("Failed to generate image for %s: %s", loc_data["slug"], e)
+            return "", None
 
     def _position_hint(self, x: int, y: int) -> str:
         h = "слева" if x < 35 else "справа" if x > 65 else "по центру"
@@ -488,14 +619,15 @@ Slugs и id — на латинице (snake_case).
         return f"{h}, {v}"
 
     # ─────────────────────────────────────────────
-    # STEP 4: POI calibration
+    # STEP 5: POI calibration (from bytes)
     # ─────────────────────────────────────────────
 
-    async def _calibrate_pois(
-        self, image_path: str, pois: list[dict], location_name: str, location_description: str,
+    async def _calibrate_pois_from_bytes(
+        self, image_bytes: bytes, pois: list[dict],
+        location_name: str, location_description: str,
     ) -> list[dict]:
-        with open(image_path, "rb") as f:
-            image_b64 = base64.b64encode(f.read()).decode()
+        """Calibrate POI positions using image bytes (no disk read needed)."""
+        image_b64 = base64.b64encode(image_bytes).decode()
 
         poi_list_text = "\n".join([
             f'  - id: "{p["id"]}", label: "{p["label"]}", description: "{p.get("description", "")}"'
@@ -558,7 +690,7 @@ Slugs и id — на латинице (snake_case).
         return pois
 
     # ─────────────────────────────────────────────
-    # STEP 5: Character avatars
+    # STEP 6: Character avatars
     # ─────────────────────────────────────────────
 
     async def _generate_avatar(self, char_data: dict, case_slug: str) -> str:
@@ -585,20 +717,20 @@ Slugs и id — на латинице (snake_case).
             image_b64 = response.data[0].b64_json
             image_bytes = base64.b64decode(image_b64)
 
-            filename = f"{char_data['slug']}.png"
-            rel_path = f"generated/{case_slug}/characters/{filename}"
-            full_path = IMAGES_BASE_DIR / case_slug / "characters" / filename
-            full_path.parent.mkdir(parents=True, exist_ok=True)
-            full_path.write_bytes(image_bytes)
+            key = f"cases/{case_slug}/characters/{char_data['slug']}.webp"
+            local_rel = f"generated/{case_slug}/characters/{char_data['slug']}.png"
 
-            return rel_path
+            return await self._store_image(
+                image_bytes, key, local_rel,
+                max_width=512, max_height=512, quality=80,
+            )
 
         except Exception as e:
-            logger.error(f"Failed to generate avatar for {char_data['slug']}: {e}")
+            logger.error("Failed to generate avatar for %s: %s", char_data["slug"], e)
             return ""
 
     # ─────────────────────────────────────────────
-    # STEP 6: Evidence images
+    # STEP 7: Evidence images
     # ─────────────────────────────────────────────
 
     async def _generate_evidence_image(self, ev_data: dict, case_slug: str) -> str:
@@ -625,20 +757,20 @@ Slugs и id — на латинице (snake_case).
             image_b64 = response.data[0].b64_json
             image_bytes = base64.b64decode(image_b64)
 
-            filename = f"{ev_data['slug']}.png"
-            rel_path = f"generated/{case_slug}/evidence/{filename}"
-            full_path = IMAGES_BASE_DIR / case_slug / "evidence" / filename
-            full_path.parent.mkdir(parents=True, exist_ok=True)
-            full_path.write_bytes(image_bytes)
+            key = f"cases/{case_slug}/evidence/{ev_data['slug']}.webp"
+            local_rel = f"generated/{case_slug}/evidence/{ev_data['slug']}.png"
 
-            return rel_path
+            return await self._store_image(
+                image_bytes, key, local_rel,
+                max_width=800, max_height=800, quality=80,
+            )
 
         except Exception as e:
-            logger.error(f"Failed to generate evidence image for {ev_data['slug']}: {e}")
+            logger.error("Failed to generate evidence image for %s: %s", ev_data["slug"], e)
             return ""
 
     # ─────────────────────────────────────────────
-    # STEP 7: Save to DB
+    # STEP 8: Save to DB
     # ─────────────────────────────────────────────
 
     async def _save_to_database(self, case_data: dict, db: AsyncSession) -> UUID:
@@ -652,6 +784,7 @@ Slugs и id — на латинице (snake_case).
             description=case_info["description"],
             difficulty=case_info.get("difficulty", "medium"),
             estimated_time_min=case_info.get("estimated_time_min", 60),
+            cover_image=case_info.get("cover_image", ""),
             phases=case_info.get("phases"),
             solution=case_info.get("solution"),
             is_published=False,

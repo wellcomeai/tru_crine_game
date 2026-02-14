@@ -115,6 +115,7 @@ export default function CasesPage() {
                     <img
                       src={getImageUrl(c.cover_image)}
                       alt={c.title}
+                      loading="lazy"
                       className="w-full h-full object-cover"
                       onError={(e) => {
                         (e.target as HTMLImageElement).style.display = 'none';

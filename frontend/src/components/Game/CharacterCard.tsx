@@ -31,6 +31,7 @@ export default function CharacterCard({ character, onClick }: CharacterCardProps
             <img
               src={getImageUrl(character.avatar)}
               alt={character.name}
+              loading="lazy"
               className="w-14 h-14 rounded-full object-cover border-2 border-noir-600"
               onError={(e) => {
                 (e.target as HTMLImageElement).style.display = 'none';

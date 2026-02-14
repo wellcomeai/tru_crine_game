@@ -3,9 +3,11 @@ Admin API for case management and AI generation.
 Access restricted to ADMIN_EMAIL.
 """
 
+import json
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException
+from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -34,19 +36,35 @@ class GenerateCaseRequest(BaseModel):
 
 
 @router.post("/generate-case")
-async def generate_case(
+async def generate_case_stream(
     req: GenerateCaseRequest,
     db: AsyncSession = Depends(get_db),
     admin: User = Depends(require_admin),
 ):
-    result = await case_generator.generate_full_case(
-        db=db,
-        theme=req.theme,
-        difficulty=req.difficulty,
-        num_suspects=req.num_suspects,
-        setting=req.setting,
+    """Generate case with SSE progress streaming."""
+
+    async def event_stream():
+        try:
+            async for progress in case_generator.generate_full_case_with_progress(
+                db=db,
+                theme=req.theme,
+                difficulty=req.difficulty,
+                num_suspects=req.num_suspects,
+                setting=req.setting,
+            ):
+                yield f"data: {json.dumps(progress, ensure_ascii=False)}\n\n"
+        except Exception as e:
+            yield f"data: {json.dumps({'status': 'error', 'message': str(e)}, ensure_ascii=False)}\n\n"
+
+    return StreamingResponse(
+        event_stream(),
+        media_type="text/event-stream",
+        headers={
+            "Cache-Control": "no-cache",
+            "Connection": "keep-alive",
+            "X-Accel-Buffering": "no",
+        },
     )
-    return result
 
 
 @router.get("/cases")

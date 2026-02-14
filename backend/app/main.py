@@ -1,9 +1,8 @@
 from contextlib import asynccontextmanager
 from pathlib import Path
 
-from fastapi import FastAPI, Request, HTTPException
+from fastapi import FastAPI
 from fastapi.staticfiles import StaticFiles
-from fastapi.responses import FileResponse
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.database import create_tables
@@ -28,7 +27,7 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# 1. API routes
+# 1. API routes (checked FIRST — before any mounts)
 app.include_router(api_router, prefix="/api")
 
 # 2. Static images
@@ -36,19 +35,9 @@ images_path = Path(__file__).parent.parent.parent / "images"
 if images_path.exists():
     app.mount("/images", StaticFiles(directory=str(images_path)), name="images")
 
-# 3. Frontend static files (built React)
+# 3. Frontend SPA (checked LAST — after API routes)
+#    html=True makes it serve index.html for any path without a matching file,
+#    which is exactly what SPA routing needs.
 frontend_dist = Path(__file__).parent.parent.parent / "frontend" / "dist"
 if frontend_dist.exists():
-    app.mount("/assets", StaticFiles(directory=str(frontend_dist / "assets")), name="frontend-assets")
-
-    @app.get("/{full_path:path}")
-    async def serve_spa(request: Request, full_path: str):
-        """All non-API paths -> index.html (SPA routing)"""
-        # Never intercept API or images routes
-        if full_path.startswith("api") or full_path.startswith("images"):
-            raise HTTPException(status_code=404, detail="Not found")
-
-        file_path = frontend_dist / full_path
-        if full_path and file_path.exists() and file_path.is_file():
-            return FileResponse(file_path)
-        return FileResponse(frontend_dist / "index.html")
+    app.mount("/", StaticFiles(directory=str(frontend_dist), html=True), name="spa")

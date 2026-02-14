@@ -68,6 +68,12 @@ export default function LocationCard({ location, onClick }: LocationCardProps) {
             Осмотрено: {examinedCount}/{totalPois}
           </div>
         )}
+        {location.is_locked && location.lock_reason && (
+          <div className="mt-2 px-3 py-2 bg-noir-800/50 rounded text-xs text-gray-500 border border-noir-600/30 flex items-center gap-2">
+            <Lock size={12} className="text-gray-600 shrink-0" />
+            <span>{location.lock_reason}</span>
+          </div>
+        )}
       </div>
     </motion.div>
   );

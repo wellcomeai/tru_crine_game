@@ -160,22 +160,119 @@ class GameEngine:
                         result_data["new_evidence"].append({"slug": ev.slug, "name": ev.name})
                         result_data["notifications"].append(f"Получена новая улика: {ev.name}!")
 
-        # Check phases
+        # Check phases (STRICTLY SEQUENTIAL)
         case = await db.get(Case, case_id)
-        phases = case.phases or []
-        for phase in phases:
+        phases_sorted = sorted(
+            case.phases or [],
+            key=lambda p: p.get("sort_order", 0)
+        )
+
+        for i, phase in enumerate(phases_sorted):
             phase_id = phase["id"]
-            if phase_id not in (state.unlocked_phases or []):
-                conditions = phase.get("completion_conditions")
-                if await self.evaluate_conditions(conditions, state, db, session_id):
-                    state.unlocked_phases = (state.unlocked_phases or []) + [phase_id]
-                    result_data["new_phases"].append({"id": phase_id, "name": phase["name"]})
-                    result_data["notifications"].append(f"Новая фаза: {phase['name']}!")
-                    # Update session current_phase
-                    session.current_phase = phase_id
+
+            # Already unlocked — skip
+            if phase_id in (state.unlocked_phases or []):
+                continue
+
+            # Previous phase must be unlocked first
+            if i > 0:
+                prev_phase_id = phases_sorted[i - 1]["id"]
+                if prev_phase_id not in (state.unlocked_phases or []):
+                    break  # Previous not done — stop checking further
+
+            # Evaluate conditions for current phase
+            conditions = phase.get("completion_conditions")
+            if conditions and await self.evaluate_conditions(conditions, state, db, session_id):
+                if state.unlocked_phases is None:
+                    state.unlocked_phases = []
+                state.unlocked_phases = state.unlocked_phases + [phase_id]
+                session.current_phase = phase_id
+                result_data["new_phases"].append({"id": phase_id, "name": phase["name"]})
+                result_data["notifications"].append(f"Новая фаза: {phase['name']}!")
+            else:
+                break  # Current phase not completed — stop checking further
 
         await db.commit()
         return result_data
+
+    async def is_location_accessible(
+        self,
+        location: Location,
+        state: GameState,
+        all_locations: list,
+        db: AsyncSession,
+        session_id=None,
+    ) -> bool:
+        """
+        Check if a location is accessible.
+
+        Rules:
+        1. Locations with is_initial=True are always accessible.
+        2. Others require ALL previous locations (by sort_order) to be fully examined.
+        3. If the location has unlock_conditions, those are checked additionally.
+        """
+        if location.is_initial:
+            return True
+
+        # Previous locations (sort_order < current)
+        previous_locations = sorted(
+            [loc for loc in all_locations if loc.sort_order < location.sort_order],
+            key=lambda l: l.sort_order,
+        )
+
+        if not previous_locations:
+            return True
+
+        examined_pois = set(state.examined_pois or [])
+        visited = set(state.visited_locations or [])
+
+        for prev_loc in previous_locations:
+            if prev_loc.slug not in visited:
+                return False
+            pois = prev_loc.points_of_interest or []
+            for poi in pois:
+                poi_key = f"{prev_loc.slug}:{poi['id']}"
+                if poi_key not in examined_pois:
+                    return False
+
+        # Additional unlock_conditions (if any)
+        if location.unlock_conditions:
+            conditions_met = await self.evaluate_conditions(
+                location.unlock_conditions, state, db, session_id
+            )
+            if not conditions_met:
+                return False
+
+        return True
+
+    def get_location_lock_reason(
+        self,
+        location: Location,
+        state: GameState,
+        all_locations: list,
+    ) -> str | None:
+        """Determine the reason a location is locked."""
+        if location.is_initial:
+            return None
+
+        examined_pois = set(state.examined_pois or [])
+        visited = set(state.visited_locations or [])
+
+        previous_locations = sorted(
+            [loc for loc in all_locations if loc.sort_order < location.sort_order],
+            key=lambda l: l.sort_order,
+        )
+
+        for prev_loc in previous_locations:
+            pois = prev_loc.points_of_interest or []
+            total = len(pois)
+            if prev_loc.slug not in visited:
+                return f"Осмотрите все точки в локации «{prev_loc.name}» (0/{total})"
+            done = sum(1 for p in pois if f"{prev_loc.slug}:{p['id']}" in examined_pois)
+            if done < total:
+                return f"Осмотрите все точки в локации «{prev_loc.name}» ({done}/{total})"
+
+        return "Выполните условия для открытия"
 
     def _snapshot_state(self, state: GameState) -> dict:
         return {
@@ -218,10 +315,13 @@ class GameEngine:
         if not location:
             raise ValueError("Location not found")
 
-        # Check access
-        if not location.is_initial:
-            if not await self.evaluate_conditions(location.unlock_conditions, state, db, session_id):
-                raise ValueError("Location is locked")
+        # Check access using sequential logic
+        all_locations_result = await db.execute(
+            select(Location).where(Location.case_id == session.case_id)
+        )
+        all_locations = all_locations_result.scalars().all()
+        if not await self.is_location_accessible(location, state, all_locations, db, session_id):
+            raise ValueError("Location is locked")
 
         # Save action
         await self._save_action(session_id, "visit", {"location_slug": location_slug}, state, db)

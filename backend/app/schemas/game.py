@@ -22,6 +22,7 @@ class LocationSchema(BaseModel):
     image: Optional[str] = None
     is_visited: bool = False
     is_locked: bool = False
+    lock_reason: Optional[str] = None
     points_of_interest: List[PointOfInterestSchema] = []
 
 

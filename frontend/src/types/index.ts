@@ -15,6 +15,7 @@ export interface Phase {
   description: string;
   is_completed: boolean;
   is_current: boolean;
+  is_locked: boolean;
 }
 
 export interface Location {
@@ -25,6 +26,7 @@ export interface Location {
   image: string | null;
   is_visited: boolean;
   is_locked: boolean;
+  lock_reason?: string | null;
   points_of_interest: PointOfInterest[];
 }
 

@@ -2,6 +2,7 @@ import { useEffect } from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { useAuthStore } from './stores/authStore';
 import Toast from './components/UI/Toast';
+import PublicLandingPage from './pages/PublicLandingPage';
 import LandingPage from './pages/LandingPage';
 import CasesPage from './pages/CasesPage';
 import GamePage from './pages/GamePage';
@@ -11,10 +12,11 @@ import BoardPage from './pages/BoardPage';
 import NotebookPage from './pages/NotebookPage';
 import AccusationPage from './pages/AccusationPage';
 import ResultPage from './pages/ResultPage';
+import AdminPage from './pages/AdminPage';
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const { isAuthenticated } = useAuthStore();
-  if (!isAuthenticated) return <Navigate to="/" replace />;
+  if (!isAuthenticated) return <Navigate to="/auth" replace />;
   return <>{children}</>;
 }
 
@@ -29,7 +31,8 @@ export default function App() {
     <BrowserRouter>
       <Toast />
       <Routes>
-        <Route path="/" element={<LandingPage />} />
+        <Route path="/" element={<PublicLandingPage />} />
+        <Route path="/auth" element={<LandingPage />} />
         <Route
           path="/cases"
           element={
@@ -91,6 +94,14 @@ export default function App() {
           element={
             <ProtectedRoute>
               <ResultPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/admin"
+          element={
+            <ProtectedRoute>
+              <AdminPage />
             </ProtectedRoute>
           }
         />

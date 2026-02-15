@@ -89,42 +89,45 @@ class PaymentService:
         if price <= 0:
             raise ValueError("Case is free, no payment needed")
 
-        # Check if already purchased
+        # Check for existing purchase record (any status)
         existing = await db.execute(
             select(CasePurchase).where(
                 CasePurchase.user_id == user.id,
                 CasePurchase.case_id == case.id,
-                CasePurchase.status == "completed",
             )
         )
-        if existing.scalar_one_or_none():
-            raise ValueError("Case already purchased")
+        purchase = existing.scalar_one_or_none()
 
-        # Cancel pending purchases for this case
-        pending = await db.execute(
-            select(CasePurchase).where(
-                CasePurchase.user_id == user.id,
-                CasePurchase.case_id == case.id,
-                CasePurchase.status == "pending",
+        if purchase:
+            # Already paid — no need to pay again
+            if purchase.status == "completed":
+                raise ValueError("Case already purchased")
+
+            # Pending or cancelled — reuse the record with a new invoice
+            result = await db.execute(text("SELECT nextval('invoice_number_seq')"))
+            invoice_number = result.scalar()
+
+            purchase.status = "pending"
+            purchase.amount = price
+            purchase.invoice_number = invoice_number
+            purchase.paid_at = None
+            purchase.callback_data = None
+            await db.flush()
+        else:
+            # First time buying — create new record
+            result = await db.execute(text("SELECT nextval('invoice_number_seq')"))
+            invoice_number = result.scalar()
+
+            purchase = CasePurchase(
+                user_id=user.id,
+                case_id=case.id,
+                amount=price,
+                payment_system="robokassa",
+                invoice_number=invoice_number,
+                status="pending",
             )
-        )
-        for p in pending.scalars().all():
-            p.status = "cancelled"
-
-        # Get invoice_number from sequence
-        result = await db.execute(text("SELECT nextval('invoice_number_seq')"))
-        invoice_number = result.scalar()
-
-        purchase = CasePurchase(
-            user_id=user.id,
-            case_id=case.id,
-            amount=price,
-            payment_system="robokassa",
-            invoice_number=invoice_number,
-            status="pending",
-        )
-        db.add(purchase)
-        await db.flush()
+            db.add(purchase)
+            await db.flush()
 
         # Generate payment URL
         description = f"Покупка дела: {case.title}"

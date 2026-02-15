@@ -156,13 +156,19 @@ def verify_result_signature(out_sum: str, inv_id: str, signature: str) -> bool:
         logger.error("ROBOKASSA_PASSWORD_2 is not configured")
         return False
 
-    expected = _md5(f"{out_sum}:{inv_id}:{password2}")
+    sign_string = f"{out_sum}:{inv_id}:{password2}"
+    expected = _md5(sign_string)
     result = expected.lower() == signature.lower()
 
     if not result:
+        # DEBUG: log exact values used (mask password partially)
+        masked_pwd = password2[:3] + "***" + password2[-2:] if len(password2) > 5 else "***"
         logger.warning(
             f"Signature mismatch for InvId={inv_id}: "
-            f"expected={expected}, received={signature}"
+            f"expected={expected}, received={signature}, "
+            f"sign_string_format='OutSum:InvId:Pwd2', "
+            f"OutSum='{out_sum}', InvId='{inv_id}', "
+            f"Pwd2_masked='{masked_pwd}', Pwd2_len={len(password2)}"
         )
 
     return result

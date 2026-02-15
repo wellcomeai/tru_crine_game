@@ -28,6 +28,11 @@ api.interceptors.response.use(
 
 export default api;
 
+export async function buyCase(caseId: string): Promise<{ payment_url: string; invoice_number: number; amount: number }> {
+  const response = await api.post(`/payments/buy/${caseId}`);
+  return response.data;
+}
+
 // Streaming via native fetch + ReadableStream
 export async function streamChat(
   sessionId: string,

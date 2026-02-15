@@ -28,6 +28,9 @@ class CaseListItem(BaseModel):
     cover_image: Optional[str] = None
     is_published: bool
     user_session: Optional[UserSessionInfo] = None
+    price: float = 0
+    is_free: bool = True
+    is_purchased: bool = False
 
     class Config:
         from_attributes = True

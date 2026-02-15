@@ -113,6 +113,7 @@ class CaseGenerator:
         num_suspects: int = 4,
         num_locations: int = 5,
         setting: str | None = None,
+        price: float = 0,
     ) -> AsyncGenerator[dict, None]:
         """Generate case with step-by-step progress updates."""
 
@@ -210,7 +211,7 @@ class CaseGenerator:
         yield {"step": 8, "total": total_steps, "step_name": "database_save",
                "message": "Сохранение в базу данных...", "status": "in_progress"}
         logger.info("Step 8/%d: Saving to database...", total_steps)
-        case_id = await self._save_to_database(case_data, db)
+        case_id = await self._save_to_database(case_data, db, price=price)
 
         yield {"step": 8, "total": total_steps, "status": "completed",
                "message": "Дело успешно создано!",
@@ -785,7 +786,7 @@ Slugs и id — на латинице (snake_case).
     # STEP 8: Save to DB
     # ─────────────────────────────────────────────
 
-    async def _save_to_database(self, case_data: dict, db: AsyncSession) -> UUID:
+    async def _save_to_database(self, case_data: dict, db: AsyncSession, price: float = 0) -> UUID:
         from app.models import Case, Location, Character, Evidence, EvidenceConnection
 
         case_info = case_data["case"]
@@ -800,6 +801,7 @@ Slugs и id — на латинице (snake_case).
             phases=case_info.get("phases"),
             solution=case_info.get("solution"),
             is_published=False,
+            price=price,
         )
         db.add(case)
         await db.flush()

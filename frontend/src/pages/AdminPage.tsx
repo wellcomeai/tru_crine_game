@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import api from '../api/client';
 import { useAuthStore } from '../stores/authStore';
-import { Loader2, Check, X, Eye, EyeOff, Trash2, ArrowLeft, FileSearch } from 'lucide-react';
+import { Loader2, Check, X, Eye, EyeOff, Trash2, ArrowLeft, FileSearch, DollarSign } from 'lucide-react';
 
 interface AdminCase {
   id: string;
@@ -10,6 +10,7 @@ interface AdminCase {
   title: string;
   difficulty: string;
   is_published: boolean;
+  price: number;
   created_at: string | null;
 }
 
@@ -37,6 +38,11 @@ export default function AdminPage() {
   const [difficulty, setDifficulty] = useState('medium');
   const [numSuspects, setNumSuspects] = useState(4);
   const [numLocations, setNumLocations] = useState(5);
+  const [price, setPrice] = useState(0);
+
+  // Price editing
+  const [editingPriceId, setEditingPriceId] = useState<string | null>(null);
+  const [editPriceValue, setEditPriceValue] = useState('');
 
   useEffect(() => {
     if (!isAdmin) {
@@ -74,6 +80,7 @@ export default function AdminPage() {
           difficulty,
           num_suspects: numSuspects,
           num_locations: numLocations,
+          price,
         }),
       });
 
@@ -137,6 +144,26 @@ export default function AdminPage() {
     } catch (err) {
       alert('Нельзя удалить опубликованное дело. Сначала снимите с публикации.');
     }
+  };
+
+  const handleSetPrice = async (caseId: string) => {
+    const newPrice = parseFloat(editPriceValue);
+    if (isNaN(newPrice) || newPrice < 0) {
+      alert('Некорректная цена');
+      return;
+    }
+    try {
+      await api.post(`/admin/cases/${caseId}/set-price`, { price: newPrice });
+      setEditingPriceId(null);
+      loadCases();
+    } catch (err) {
+      alert('Ошибка при сохранении цены');
+    }
+  };
+
+  const startEditPrice = (c: AdminCase) => {
+    setEditingPriceId(c.id);
+    setEditPriceValue(String(c.price || 0));
   };
 
   const progressPercent = progress ? (progress.step / progress.total) * 100 : 0;
@@ -215,6 +242,18 @@ export default function AdminPage() {
                   ))}
                 </select>
               </div>
+              <div>
+                <label className="block text-sm text-gray-500 mb-1">Цена (руб.)</label>
+                <input
+                  type="number"
+                  min="0"
+                  step="1"
+                  value={price}
+                  onChange={(e) => setPrice(Number(e.target.value))}
+                  placeholder="0 = бесплатно"
+                  className="w-full bg-neutral-800 border border-neutral-700 rounded-lg px-3 py-2 text-sm text-gray-200 placeholder-gray-600 focus:outline-none focus:border-amber-600"
+                />
+              </div>
             </div>
             <button
               onClick={handleGenerate}
@@ -283,6 +322,7 @@ export default function AdminPage() {
                 <tr className="border-b border-neutral-800 text-left text-gray-500">
                   <th className="px-4 py-3">Название</th>
                   <th className="px-4 py-3">Сложность</th>
+                  <th className="px-4 py-3">Цена</th>
                   <th className="px-4 py-3">Статус</th>
                   <th className="px-4 py-3">Дата</th>
                   <th className="px-4 py-3">Действия</th>
@@ -293,6 +333,47 @@ export default function AdminPage() {
                   <tr key={c.id} className="border-b border-neutral-800/50 hover:bg-neutral-800/30">
                     <td className="px-4 py-3 text-gray-200">{c.title}</td>
                     <td className="px-4 py-3 text-gray-400 capitalize">{c.difficulty}</td>
+                    <td className="px-4 py-3">
+                      {editingPriceId === c.id ? (
+                        <div className="flex items-center gap-1">
+                          <input
+                            type="number"
+                            min="0"
+                            step="1"
+                            value={editPriceValue}
+                            onChange={(e) => setEditPriceValue(e.target.value)}
+                            onKeyDown={(e) => {
+                              if (e.key === 'Enter') handleSetPrice(c.id);
+                              if (e.key === 'Escape') setEditingPriceId(null);
+                            }}
+                            className="w-20 bg-neutral-800 border border-neutral-600 rounded px-2 py-1 text-xs text-gray-200 focus:outline-none focus:border-amber-600"
+                            autoFocus
+                          />
+                          <button
+                            onClick={() => handleSetPrice(c.id)}
+                            className="p-1 text-green-400 hover:text-green-300"
+                            title="Сохранить"
+                          >
+                            <Check size={14} />
+                          </button>
+                          <button
+                            onClick={() => setEditingPriceId(null)}
+                            className="p-1 text-gray-500 hover:text-gray-300"
+                            title="Отмена"
+                          >
+                            <X size={14} />
+                          </button>
+                        </div>
+                      ) : (
+                        <button
+                          onClick={() => startEditPrice(c)}
+                          className="text-gray-400 hover:text-amber-400 transition-colors text-xs"
+                          title="Изменить цену"
+                        >
+                          {(c.price || 0) > 0 ? `${c.price} руб.` : 'Бесплатно'}
+                        </button>
+                      )}
+                    </td>
                     <td className="px-4 py-3">
                       {c.is_published ? (
                         <span className="px-2 py-0.5 bg-green-900/30 text-green-400 text-xs rounded-full">
@@ -315,6 +396,13 @@ export default function AdminPage() {
                           className="p-1 text-gray-500 hover:text-blue-400 transition-colors"
                         >
                           <FileSearch size={16} />
+                        </button>
+                        <button
+                          onClick={() => startEditPrice(c)}
+                          title="Изменить цену"
+                          className="p-1 text-gray-500 hover:text-amber-400 transition-colors"
+                        >
+                          <DollarSign size={16} />
                         </button>
                         {c.is_published ? (
                           <button
@@ -346,7 +434,7 @@ export default function AdminPage() {
                 ))}
                 {cases.length === 0 && (
                   <tr>
-                    <td colSpan={5} className="px-4 py-8 text-center text-gray-600">
+                    <td colSpan={6} className="px-4 py-8 text-center text-gray-600">
                       Нет дел
                     </td>
                   </tr>

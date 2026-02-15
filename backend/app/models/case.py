@@ -1,6 +1,6 @@
 import uuid
 from datetime import datetime
-from sqlalchemy import Column, String, Text, DateTime, Boolean, Integer
+from sqlalchemy import Column, String, Text, DateTime, Boolean, Integer, Numeric
 from sqlalchemy.dialects.postgresql import UUID, JSONB
 from app.database import Base
 
@@ -18,4 +18,5 @@ class Case(Base):
     is_published = Column(Boolean, default=True)
     solution = Column(JSONB, nullable=False)
     phases = Column(JSONB, default=list)
+    price = Column(Numeric(10, 2), default=0)
     created_at = Column(DateTime, default=datetime.utcnow)

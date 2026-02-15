@@ -1,6 +1,7 @@
-import { X, Star, Clock, ChevronRight } from 'lucide-react';
+import { X, Star, Clock, ChevronRight, ShoppingCart } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { getImageUrl } from '../../utils/helpers';
+import type { Case } from '../../types';
 
 interface CasePreviewModalProps {
   isOpen: boolean;
@@ -17,9 +18,12 @@ interface CasePreviewModalProps {
       description: string;
     }>;
   } | null;
+  caseItem?: Case | null;
   onStart: (caseId: string) => void;
+  onBuy?: (caseId: string) => void;
   loading?: boolean;
   sessionStatus?: string | null;
+  buyingCaseId?: string | null;
 }
 
 const DIFFICULTY_META: Record<string, { text: string; stars: number; time: string }> = {
@@ -28,10 +32,12 @@ const DIFFICULTY_META: Record<string, { text: string; stars: number; time: strin
   hard: { text: 'Сложное', stars: 3, time: '~60 мин' },
 };
 
-export default function CasePreviewModal({ isOpen, onClose, caseData, onStart, loading, sessionStatus }: CasePreviewModalProps) {
+export default function CasePreviewModal({ isOpen, onClose, caseData, caseItem, onStart, onBuy, loading, sessionStatus, buyingCaseId }: CasePreviewModalProps) {
   if (!caseData) return null;
 
   const meta = DIFFICULTY_META[caseData.difficulty] || DIFFICULTY_META.medium;
+  const needsPurchase = caseItem && !caseItem.is_free && !caseItem.is_purchased;
+  const isBuying = buyingCaseId === caseData.id;
 
   return (
     <AnimatePresence>
@@ -103,6 +109,11 @@ export default function CasePreviewModal({ isOpen, onClose, caseData, onStart, l
                     <Clock size={14} />
                     {meta.time}
                   </span>
+                  {caseItem && !caseItem.is_free && (
+                    <span className="flex items-center gap-1 text-amber-400 font-medium">
+                      {caseItem.price} руб.
+                    </span>
+                  )}
                 </div>
 
                 {/* Description */}
@@ -142,27 +153,44 @@ export default function CasePreviewModal({ isOpen, onClose, caseData, onStart, l
                   >
                     Закрыть
                   </button>
-                  <button
-                    onClick={() => onStart(caseData.id)}
-                    disabled={loading}
-                    className="flex-1 px-5 py-2.5 text-sm font-medium bg-amber-600 text-white rounded-lg hover:bg-amber-500 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
-                  >
-                    {loading ? (
-                      'Загрузка...'
-                    ) : sessionStatus === 'active' ? (
-                      <>
-                        Продолжить расследование <ChevronRight size={16} />
-                      </>
-                    ) : sessionStatus === 'completed' ? (
-                      <>
-                        Начать заново <ChevronRight size={16} />
-                      </>
-                    ) : (
-                      <>
-                        Начать расследование <ChevronRight size={16} />
-                      </>
-                    )}
-                  </button>
+                  {needsPurchase && onBuy ? (
+                    <button
+                      onClick={() => onBuy(caseData.id)}
+                      disabled={isBuying}
+                      className="flex-1 px-5 py-2.5 text-sm font-medium bg-amber-600 text-white rounded-lg hover:bg-amber-500 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                    >
+                      {isBuying ? (
+                        'Переход к оплате...'
+                      ) : (
+                        <>
+                          <ShoppingCart size={16} />
+                          Купить за {caseItem!.price} руб.
+                        </>
+                      )}
+                    </button>
+                  ) : (
+                    <button
+                      onClick={() => onStart(caseData.id)}
+                      disabled={loading}
+                      className="flex-1 px-5 py-2.5 text-sm font-medium bg-amber-600 text-white rounded-lg hover:bg-amber-500 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                    >
+                      {loading ? (
+                        'Загрузка...'
+                      ) : sessionStatus === 'active' ? (
+                        <>
+                          Продолжить расследование <ChevronRight size={16} />
+                        </>
+                      ) : sessionStatus === 'completed' ? (
+                        <>
+                          Начать заново <ChevronRight size={16} />
+                        </>
+                      ) : (
+                        <>
+                          Начать расследование <ChevronRight size={16} />
+                        </>
+                      )}
+                    </button>
+                  )}
                 </div>
               </div>
             </div>

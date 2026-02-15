@@ -9,9 +9,11 @@ from app.models.game_state import GameState
 from app.models.interrogation_log import InterrogationLog
 from app.models.action_history import ActionHistory
 from app.models.accusation import Accusation
+from app.models.case_purchase import CasePurchase
 
 __all__ = [
     "User", "Case", "Location", "Character", "Evidence",
     "EvidenceConnection", "GameSession", "GameState",
     "InterrogationLog", "ActionHistory", "Accusation",
+    "CasePurchase",
 ]

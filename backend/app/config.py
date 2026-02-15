@@ -17,6 +17,15 @@ class Settings(BaseSettings):
     # Images
     IMAGES_BASE_URL: str = ""
 
+    # Robokassa
+    ROBOKASSA_MERCHANT_LOGIN: str = ""
+    ROBOKASSA_PASSWORD_1: str = ""
+    ROBOKASSA_PASSWORD_2: str = ""
+    ROBOKASSA_TEST_MODE: str = "true"
+
+    # App URL (for redirect)
+    APP_URL: str = "http://localhost:5173"
+
     # Cloudflare R2
     R2_ENDPOINT_URL: str = ""
     R2_ACCESS_KEY_ID: str = ""

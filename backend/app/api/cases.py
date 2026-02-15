@@ -9,8 +9,11 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.config import settings
 from app.database import get_db
 from app.models import Case, GameSession, GameState, Character, User
+from app.models.case_purchase import CasePurchase
 from app.schemas.case import CaseListItem, CaseDetail, StartCaseResponse, PhaseSchema, UserSessionInfo
 from app.services.auth_service import get_current_user
+
+ADMIN_EMAIL = "well96well@gmail.com"
 
 router = APIRouter()
 
@@ -42,9 +45,12 @@ async def list_cases(
     result = await db.execute(select(Case).where(Case.is_published == True))
     cases = result.scalars().all()
 
-    # Build user session map if authenticated
+    # Build user session map and purchased set if authenticated
     session_map: dict[str, UserSessionInfo] = {}
+    purchased_ids: set[str] = set()
+    is_admin = False
     if current_user:
+        is_admin = current_user.email == ADMIN_EMAIL
         sessions_result = await db.execute(
             select(GameSession)
             .where(GameSession.user_id == current_user.id)
@@ -60,6 +66,15 @@ async def list_cases(
                     score=s.score,
                 )
 
+        # Build set of purchased case IDs
+        purchases_result = await db.execute(
+            select(CasePurchase.case_id).where(
+                CasePurchase.user_id == current_user.id,
+                CasePurchase.status == "completed",
+            )
+        )
+        purchased_ids = {str(p) for p in purchases_result.scalars().all()}
+
     return [
         CaseListItem(
             id=str(c.id),
@@ -71,6 +86,9 @@ async def list_cases(
             cover_image=c.cover_image,
             is_published=c.is_published,
             user_session=session_map.get(str(c.id)),
+            price=float(c.price or 0),
+            is_free=(c.price or 0) <= 0,
+            is_purchased=str(c.id) in purchased_ids or is_admin or (c.price or 0) <= 0,
         )
         for c in cases
     ]
@@ -109,6 +127,23 @@ async def start_case(
     case = await db.get(Case, case_id)
     if not case:
         raise HTTPException(status_code=404, detail="Case not found")
+
+    # Check if paid case requires purchase
+    price = float(case.price or 0)
+    is_admin = current_user.email == ADMIN_EMAIL
+    if price > 0 and not is_admin:
+        purchase_result = await db.execute(
+            select(CasePurchase).where(
+                CasePurchase.user_id == current_user.id,
+                CasePurchase.case_id == case_id,
+                CasePurchase.status == "completed",
+            )
+        )
+        if not purchase_result.scalar_one_or_none():
+            raise HTTPException(
+                status_code=402,
+                detail="Payment required. Purchase this case first."
+            )
 
     # Check for active session
     result = await db.execute(

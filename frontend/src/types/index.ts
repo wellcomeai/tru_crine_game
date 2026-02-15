@@ -14,6 +14,9 @@ export interface Case {
   cover_image: string | null;
   phases: Phase[];
   user_session?: UserSessionInfo | null;
+  price: number;
+  is_free: boolean;
+  is_purchased: boolean;
 }
 
 export interface Phase {

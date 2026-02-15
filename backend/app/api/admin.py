@@ -35,6 +35,7 @@ class GenerateCaseRequest(BaseModel):
     num_suspects: int = 4
     num_locations: int = 5
     setting: str | None = None
+    price: float = 0
 
 
 @router.post("/generate-case")
@@ -54,6 +55,7 @@ async def generate_case_stream(
                 num_suspects=req.num_suspects,
                 num_locations=req.num_locations,
                 setting=req.setting,
+                price=req.price,
             ):
                 yield f"data: {json.dumps(progress, ensure_ascii=False)}\n\n"
         except Exception as e:
@@ -86,6 +88,7 @@ async def admin_list_cases(
             "title": c.title,
             "difficulty": c.difficulty,
             "is_published": c.is_published,
+            "price": float(c.price or 0),
             "created_at": c.created_at.isoformat() if c.created_at else None,
         }
         for c in cases
@@ -137,6 +140,29 @@ async def delete_case(
 
 
 # ─────────────────────────────────────────────
+# Set case price
+# ─────────────────────────────────────────────
+
+class SetPriceRequest(BaseModel):
+    price: float
+
+
+@router.post("/cases/{case_id}/set-price")
+async def set_case_price(
+    case_id: UUID,
+    req: SetPriceRequest,
+    db: AsyncSession = Depends(get_db),
+    admin: User = Depends(require_admin),
+):
+    case = await db.get(Case, case_id)
+    if not case:
+        raise HTTPException(404, "Case not found")
+    case.price = max(0, req.price)
+    await db.commit()
+    return {"status": "ok", "price": float(case.price)}
+
+
+# ─────────────────────────────────────────────
 # Case preview
 # ─────────────────────────────────────────────
 
@@ -181,6 +207,7 @@ async def admin_case_preview(
             "estimated_time_min": case.estimated_time_min,
             "cover_image": case.cover_image,
             "is_published": case.is_published,
+            "price": float(case.price or 0),
             "solution": case.solution,
             "phases": case.phases,
         },

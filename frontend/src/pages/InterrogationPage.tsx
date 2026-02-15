@@ -62,10 +62,15 @@ export default function InterrogationPage() {
         {/* Back button — overlay on scene, positioned after sidebar */}
         <button
           onClick={() => navigate(`/game/${sessionId}`)}
-          className="absolute top-[4.5rem] left-[4.5rem] lg:left-[13rem] z-40 flex items-center gap-1.5
+          className="absolute top-10 z-40
+                     left-4 lg:left-4
+                     flex items-center gap-1.5
                      text-gray-400 hover:text-gray-200 transition-colors
-                     bg-noir-900/60 backdrop-blur-sm rounded-lg px-3 py-1.5
-                     border border-noir-600/30"
+                     bg-noir-900/50 backdrop-blur-sm
+                     rounded-lg px-3 py-1.5
+                     border border-noir-600/30
+                     hover:border-noir-500/50
+                     hover:bg-noir-900/70"
         >
           <ArrowLeft size={16} />
           <span className="text-xs hidden sm:inline">Назад</span>

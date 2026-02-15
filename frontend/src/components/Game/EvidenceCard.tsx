@@ -15,65 +15,95 @@ export default function EvidenceCard({ evidence, onClick, compact }: EvidenceCar
   if (compact) {
     return (
       <motion.div
-        whileHover={{ scale: 1.02 }}
+        whileHover={{ scale: 1.01 }}
         onClick={onClick}
-        className="relative group flex items-center gap-2 p-2 bg-noir-700 rounded-lg border border-noir-600 cursor-pointer hover:border-gold-dim transition-all"
+        className="relative group flex items-center gap-2.5 p-2.5
+                   bg-noir-700 rounded-lg border border-noir-600
+                   cursor-pointer hover:border-gold-dim/50
+                   hover:bg-noir-700/80 transition-all"
       >
-        <span>{icon}</span>
-        <span className="text-sm text-gray-300 truncate">{evidence.name}</span>
+        {/* Type icon */}
+        <span className="text-base flex-shrink-0">{icon}</span>
+
+        {/* Name */}
+        <span className="text-sm text-gray-300 truncate flex-1">
+          {evidence.name}
+        </span>
+
+        {/* KEY badge */}
         {evidence.is_key_evidence && (
-          <span className="text-xs text-gold bg-gold/10 px-1 py-0.5 rounded ml-auto flex-shrink-0">
+          <span className="text-[10px] text-gold bg-gold/10
+                           px-1.5 py-0.5 rounded font-bold
+                           flex-shrink-0 tracking-wide">
             KEY
           </span>
         )}
 
-        {/* Tooltip on hover */}
-        {evidence.description && (
-          <div className="absolute left-0 bottom-full mb-2 z-50
-                          opacity-0 group-hover:opacity-100
-                          transition-opacity duration-200
-                          pointer-events-none w-72 max-w-sm">
-            <div className="bg-noir-800 border border-noir-500 rounded-lg
-                            shadow-xl shadow-black/40 p-3">
-              {/* Arrow down */}
-              <div className="absolute -bottom-[5px] left-6
-                              w-2.5 h-2.5 bg-noir-800 border-r border-b
-                              border-noir-500 rotate-45" />
-              {/* Name */}
-              <p className="text-xs font-semibold text-gold mb-1">
+        {/* Tooltip */}
+        <div className="absolute left-full top-1/2 -translate-y-1/2 ml-3
+                        z-50 opacity-0 group-hover:opacity-100
+                        transition-opacity duration-200
+                        pointer-events-none w-72">
+          <div className="bg-noir-800 border border-noir-500/80
+                          rounded-xl shadow-2xl shadow-black/60 p-4
+                          relative">
+
+            {/* Arrow left */}
+            <div className="absolute top-1/2 -left-[6px] -translate-y-1/2
+                            w-3 h-3 bg-noir-800 border-l border-b
+                            border-noir-500/80 rotate-45" />
+
+            {/* Header: icon + name */}
+            <div className="flex items-center gap-2 mb-2">
+              <span className="text-lg">{icon}</span>
+              <h4 className="text-sm font-semibold text-gold
+                             font-serif leading-tight">
                 {evidence.name}
-              </p>
-              {/* Type + importance */}
-              <div className="flex items-center gap-2 mb-1.5">
-                {evidence.type && (
-                  <span className="text-[10px] text-gray-500 bg-noir-700
-                                   px-1.5 py-0.5 rounded">
-                    {evidence.type}
-                  </span>
-                )}
-                <span className="text-[10px] text-gray-600">
-                  Важность: {'★'.repeat(evidence.importance)}{'☆'.repeat(5 - evidence.importance)}
-                </span>
-              </div>
-              {/* Description */}
-              <p className="text-[11px] text-gray-400 leading-relaxed line-clamp-3">
+              </h4>
+            </div>
+
+            {/* Meta: type + importance */}
+            <div className="flex items-center gap-3 mb-2">
+              <span className="text-[10px] text-gray-400 bg-noir-700
+                               px-2 py-0.5 rounded-md border border-noir-600/50
+                               uppercase tracking-wider">
+                {evidence.type || 'улика'}
+              </span>
+              <span className="text-[11px] text-gold/60">
+                {'★'.repeat(evidence.importance)}
+                {'☆'.repeat(Math.max(0, 5 - evidence.importance))}
+              </span>
+            </div>
+
+            {/* Description */}
+            {evidence.description && (
+              <p className="text-[11px] text-gray-400 leading-relaxed
+                            line-clamp-3 mb-2">
                 {evidence.description}
               </p>
-              {/* Tags */}
-              {evidence.tags && evidence.tags.length > 0 && (
-                <div className="flex gap-1 mt-2 flex-wrap">
-                  {evidence.tags.slice(0, 4).map((tag) => (
-                    <span key={tag} className="text-[10px] bg-noir-700
-                                               text-gray-500 px-1.5 py-0.5
-                                               rounded">
-                      #{tag}
-                    </span>
-                  ))}
-                </div>
-              )}
-            </div>
+            )}
+
+            {/* Tags */}
+            {evidence.tags && evidence.tags.length > 0 && (
+              <div className="flex gap-1 flex-wrap pt-1.5
+                              border-t border-noir-600/30">
+                {evidence.tags.slice(0, 4).map((tag) => (
+                  <span key={tag}
+                        className="text-[10px] bg-noir-700/80
+                                   text-gray-500 px-1.5 py-0.5
+                                   rounded-md">
+                    #{tag}
+                  </span>
+                ))}
+                {evidence.tags.length > 4 && (
+                  <span className="text-[10px] text-gray-600">
+                    +{evidence.tags.length - 4}
+                  </span>
+                )}
+              </div>
+            )}
           </div>
-        )}
+        </div>
       </motion.div>
     );
   }

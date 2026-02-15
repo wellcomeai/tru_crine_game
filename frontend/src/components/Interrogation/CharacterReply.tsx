@@ -40,9 +40,10 @@ export default function CharacterReply({
         initial={{ opacity: 0, x: 20 }}
         animate={{ opacity: 1, x: 0 }}
         transition={{ duration: 0.3 }}
-        className="bg-black/40 backdrop-blur-md rounded-lg px-5 py-4
-                   border border-white/5 max-h-[60%] overflow-y-auto
-                   scrollbar-thin pointer-events-auto"
+        className="bg-black/35 backdrop-blur-sm rounded-lg px-5 py-4
+                   border border-white/5 max-h-[55%] overflow-y-auto
+                   scrollbar-thin pointer-events-auto
+                   shadow-lg shadow-black/20"
       >
         <p className="text-sm leading-relaxed text-gray-200 whitespace-pre-wrap">
           {text}

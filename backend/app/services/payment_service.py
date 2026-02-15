@@ -49,7 +49,7 @@ class PaymentService:
         receipt_encoded = quote(receipt_json)
 
         # Signature: MD5(MerchantLogin:OutSum:InvId:Receipt:Password1)
-        sign_string = f"{merchant_login}:{out_sum}:{invoice_number}:{receipt_json}:{password1}"
+        sign_string = f"{merchant_login}:{out_sum}:{invoice_number}:{password1}"
         signature = hashlib.md5(sign_string.encode()).hexdigest()
 
         base_url = "https://auth.robokassa.ru/Merchant/Index.aspx"

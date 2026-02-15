@@ -156,22 +156,39 @@ def verify_result_signature(out_sum: str, inv_id: str, signature: str) -> bool:
         logger.error("ROBOKASSA_PASSWORD_2 is not configured")
         return False
 
-    sign_string = f"{out_sum}:{inv_id}:{password2}"
-    expected = _md5(sign_string)
-    result = expected.lower() == signature.lower()
+    sig_lower = signature.lower()
 
-    if not result:
-        # DEBUG: log exact values used (mask password partially)
-        masked_pwd = password2[:3] + "***" + password2[-2:] if len(password2) > 5 else "***"
-        logger.warning(
-            f"Signature mismatch for InvId={inv_id}: "
-            f"expected={expected}, received={signature}, "
-            f"sign_string_format='OutSum:InvId:Pwd2', "
-            f"OutSum='{out_sum}', InvId='{inv_id}', "
-            f"Pwd2_masked='{masked_pwd}', Pwd2_len={len(password2)}"
-        )
+    # Try with the raw OutSum as received from Robokassa
+    expected_raw = _md5(f"{out_sum}:{inv_id}:{password2}")
+    if expected_raw.lower() == sig_lower:
+        return True
 
-    return result
+    # Robokassa may send OutSum with extra decimals (e.g. "1.000000")
+    # but compute signature with normalized format (e.g. "1.00")
+    # Try normalized to 2 decimal places
+    try:
+        normalized_sum = f"{Decimal(out_sum).quantize(Decimal('0.01'))}"
+        if normalized_sum != out_sum:
+            expected_norm = _md5(f"{normalized_sum}:{inv_id}:{password2}")
+            if expected_norm.lower() == sig_lower:
+                logger.info(
+                    f"Signature matched with normalized OutSum for InvId={inv_id}: "
+                    f"raw='{out_sum}' -> normalized='{normalized_sum}'"
+                )
+                return True
+    except (InvalidOperation, Exception):
+        pass
+
+    # Nothing matched — log debug info
+    masked_pwd = password2[:3] + "***" + password2[-2:] if len(password2) > 5 else "***"
+    logger.warning(
+        f"Signature mismatch for InvId={inv_id}: "
+        f"expected_raw={expected_raw}, received={signature}, "
+        f"OutSum='{out_sum}', InvId='{inv_id}', "
+        f"Pwd2_masked='{masked_pwd}', Pwd2_len={len(password2)}"
+    )
+
+    return False
 
 
 # ---------------------------------------------------------------------------

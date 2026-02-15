@@ -19,31 +19,36 @@ export default function CharacterReply({
   const roleLabel = ROLE_LABELS[role || ''] || role || 'Свидетель';
 
   return (
-    <div className="absolute top-10 left-4 z-20 max-w-[55%] md:max-w-[45%]">
+    <div className="absolute top-12 right-4 bottom-14 w-[45%] sm:w-[35%] z-20
+                    flex flex-col justify-center pointer-events-none">
       {/* Role badge */}
-      <div className="mb-1.5 flex items-center gap-2">
-        <span className="text-[10px] font-bold uppercase tracking-[0.15em] text-gold/80 px-2 py-0.5 rounded border border-gold/20 bg-noir-900/60 backdrop-blur-sm">
+      <div className="mb-2 flex items-center gap-2">
+        <span className="text-[10px] font-bold uppercase tracking-[0.15em]
+                         text-gold/80 px-2 py-0.5 rounded
+                         border border-gold/20 bg-noir-900/40 backdrop-blur-sm">
           {roleLabel}
-        </span>
-        <span className="text-[10px] text-gray-500 font-medium">
-          {characterName}
         </span>
       </div>
 
-      {/* Reply bubble */}
+      {/* Character name */}
+      <span className="text-[11px] text-gray-500 font-medium mb-2">
+        {characterName}
+      </span>
+
+      {/* Reply text block */}
       <motion.div
-        initial={{ opacity: 0, y: 8 }}
-        animate={{ opacity: 1, y: 0 }}
+        initial={{ opacity: 0, x: 20 }}
+        animate={{ opacity: 1, x: 0 }}
         transition={{ duration: 0.3 }}
-        className="rounded-lg border border-gray-600/30 backdrop-blur-md px-4 py-3"
-        style={{
-          backgroundColor: 'rgba(15, 15, 20, 0.75)',
-        }}
+        className="bg-black/40 backdrop-blur-md rounded-lg px-5 py-4
+                   border border-white/5 max-h-[60%] overflow-y-auto
+                   scrollbar-thin pointer-events-auto"
       >
         <p className="text-sm leading-relaxed text-gray-200 whitespace-pre-wrap">
           {text}
           {isStreaming && (
-            <span className="inline-block w-[2px] h-4 ml-0.5 bg-gold animate-pulse align-text-bottom" />
+            <span className="inline-block w-[2px] h-4 ml-0.5
+                             bg-gold animate-pulse align-text-bottom" />
           )}
         </p>
       </motion.div>

@@ -27,7 +27,7 @@ export default function DialogueLog({ messages, characterName }: DialogueLogProp
         className="w-full flex items-center justify-between px-4 py-2 text-xs text-gray-500 hover:text-gray-400 transition-colors"
       >
         <span>
-          Лог допроса ({messages.length} {messages.length === 1 ? 'сообщение' : messages.length < 5 ? 'сообщения' : 'сообщений'})
+          Протокол допроса ({messages.length} {messages.length === 1 ? 'сообщение' : messages.length < 5 ? 'сообщения' : 'сообщений'})
         </span>
         {isExpanded ? <ChevronDown size={14} /> : <ChevronUp size={14} />}
       </button>

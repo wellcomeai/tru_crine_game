@@ -17,10 +17,63 @@ export default function EvidenceCard({ evidence, onClick, compact }: EvidenceCar
       <motion.div
         whileHover={{ scale: 1.02 }}
         onClick={onClick}
-        className="flex items-center gap-2 p-2 bg-noir-700 rounded-lg border border-noir-600 cursor-pointer hover:border-gold-dim transition-all"
+        className="relative group flex items-center gap-2 p-2 bg-noir-700 rounded-lg border border-noir-600 cursor-pointer hover:border-gold-dim transition-all"
       >
         <span>{icon}</span>
         <span className="text-sm text-gray-300 truncate">{evidence.name}</span>
+        {evidence.is_key_evidence && (
+          <span className="text-xs text-gold bg-gold/10 px-1 py-0.5 rounded ml-auto flex-shrink-0">
+            KEY
+          </span>
+        )}
+
+        {/* Tooltip on hover */}
+        {evidence.description && (
+          <div className="absolute left-0 bottom-full mb-2 z-50
+                          opacity-0 group-hover:opacity-100
+                          transition-opacity duration-200
+                          pointer-events-none w-72 max-w-sm">
+            <div className="bg-noir-800 border border-noir-500 rounded-lg
+                            shadow-xl shadow-black/40 p-3">
+              {/* Arrow down */}
+              <div className="absolute -bottom-[5px] left-6
+                              w-2.5 h-2.5 bg-noir-800 border-r border-b
+                              border-noir-500 rotate-45" />
+              {/* Name */}
+              <p className="text-xs font-semibold text-gold mb-1">
+                {evidence.name}
+              </p>
+              {/* Type + importance */}
+              <div className="flex items-center gap-2 mb-1.5">
+                {evidence.type && (
+                  <span className="text-[10px] text-gray-500 bg-noir-700
+                                   px-1.5 py-0.5 rounded">
+                    {evidence.type}
+                  </span>
+                )}
+                <span className="text-[10px] text-gray-600">
+                  Важность: {'★'.repeat(evidence.importance)}{'☆'.repeat(5 - evidence.importance)}
+                </span>
+              </div>
+              {/* Description */}
+              <p className="text-[11px] text-gray-400 leading-relaxed line-clamp-3">
+                {evidence.description}
+              </p>
+              {/* Tags */}
+              {evidence.tags && evidence.tags.length > 0 && (
+                <div className="flex gap-1 mt-2 flex-wrap">
+                  {evidence.tags.slice(0, 4).map((tag) => (
+                    <span key={tag} className="text-[10px] bg-noir-700
+                                               text-gray-500 px-1.5 py-0.5
+                                               rounded">
+                      #{tag}
+                    </span>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+        )}
       </motion.div>
     );
   }

@@ -13,7 +13,7 @@ export default function EvidenceSelector({ isOpen, onClose, onSelect }: Evidence
 
   return (
     <Modal isOpen={isOpen} onClose={onClose} title="Предъявить улику">
-      <div className="space-y-2 max-h-96 overflow-y-auto">
+      <div className="space-y-2 py-2 relative">
         {evidence.length === 0 ? (
           <p className="text-gray-500 text-sm text-center py-4">Нет собранных улик</p>
         ) : (

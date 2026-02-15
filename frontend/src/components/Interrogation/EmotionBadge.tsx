@@ -30,7 +30,7 @@ export default function EmotionBadge({ emotion }: EmotionBadgeProps) {
         animate={{ opacity: 1, scale: 1 }}
         exit={{ opacity: 0, scale: 0.9 }}
         transition={{ duration: 0.3 }}
-        className="absolute bottom-4 right-4 z-20 flex items-center gap-2 px-3 py-1.5 rounded-full border backdrop-blur-md"
+        className="absolute bottom-4 left-4 z-20 flex items-center gap-2 px-3 py-1.5 rounded-full border backdrop-blur-md"
         style={{
           backgroundColor: 'rgba(15, 15, 20, 0.7)',
           borderColor: `${color}40`,

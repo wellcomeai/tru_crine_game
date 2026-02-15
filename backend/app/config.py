@@ -21,7 +21,7 @@ class Settings(BaseSettings):
     ROBOKASSA_MERCHANT_LOGIN: str = ""
     ROBOKASSA_PASSWORD_1: str = ""
     ROBOKASSA_PASSWORD_2: str = ""
-    ROBOKASSA_TEST_MODE: str = "true"
+    ROBOKASSA_TEST_MODE: bool = False  # True for testing, False for production
 
     # App URL (for redirect)
     APP_URL: str = "http://localhost:5173"

@@ -1,12 +1,19 @@
 """
-Robokassa payment integration for case purchases.
+Robokassa Payment Service — production integration for Detective AI.
+
+Handles:
+  - Payment URL generation with MD5 signature
+  - Callback signature verification
+  - Receipt generation for 54-FZ fiscal compliance
+  - Case purchase lifecycle (create, confirm, check access)
 """
+
 import hashlib
 import json
 import logging
 from datetime import datetime
-from decimal import Decimal
-from urllib.parse import quote
+from decimal import Decimal, InvalidOperation
+from urllib.parse import urlencode
 
 from sqlalchemy import select, text
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -18,68 +25,155 @@ from app.models.case_purchase import CasePurchase
 logger = logging.getLogger(__name__)
 
 
-class PaymentService:
+# ---------------------------------------------------------------------------
+# Low-level Robokassa helpers
+# ---------------------------------------------------------------------------
 
-    def generate_payment_url(
-        self,
-        invoice_number: int,
-        amount: Decimal,
-        description: str,
-        user_email: str = "",
-    ) -> str:
-        """Generate a signed Robokassa payment URL."""
-        merchant_login = settings.ROBOKASSA_MERCHANT_LOGIN
-        password1 = settings.ROBOKASSA_PASSWORD_1
-        out_sum = f"{amount:.2f}"
+def _md5(value: str) -> str:
+    """Return the MD5 hex digest of the given string."""
+    return hashlib.md5(value.encode("utf-8")).hexdigest()
 
-        # Receipt for 54-FZ compliance
-        receipt = {
-            "sno": "usn_income",
-            "items": [{
+
+def _build_receipt(description: str, amount: Decimal) -> str:
+    """
+    Build a 54-FZ fiscal receipt as a JSON string.
+
+    Returns raw JSON (NOT url-encoded) — encoding is handled by urlencode().
+    """
+    receipt = {
+        "sno": "usn_income",
+        "items": [
+            {
                 "name": description[:128],
                 "quantity": 1,
                 "sum": float(amount),
                 "payment_method": "full_payment",
                 "payment_object": "service",
                 "tax": "none",
-            }]
-        }
+            }
+        ],
+    }
+    return json.dumps(receipt, ensure_ascii=False)
 
-        receipt_json = json.dumps(receipt, ensure_ascii=False)
-        receipt_encoded = quote(receipt_json)
 
-        # Signature: MD5(MerchantLogin:OutSum:InvId:Receipt:Password1)
-        sign_string = f"{merchant_login}:{out_sum}:{invoice_number}:{receipt_encoded}:{password1}"
-        signature = hashlib.md5(sign_string.encode()).hexdigest()
+def generate_payment_url(
+    invoice_number: int,
+    amount: Decimal,
+    description: str,
+    user_email: str = "",
+) -> str:
+    """
+    Generate a signed Robokassa payment URL.
 
-        base_url = "https://auth.robokassa.ru/Merchant/Index.aspx"
-        is_test = getattr(settings, 'ROBOKASSA_TEST_MODE', 'true').lower() == 'true'
+    Signature formula (with receipt):
+        MD5(MerchantLogin:OutSum:InvId:Receipt:Password1)
 
-        params = (
-            f"MerchantLogin={merchant_login}"
-            f"&OutSum={out_sum}"
-            f"&InvId={invoice_number}"
-            f"&Description={quote(description)}"
-            f"&SignatureValue={signature}"
-            f"&Receipt={receipt_encoded}"
-            f"&Culture=ru"
+    Signature formula (without receipt):
+        MD5(MerchantLogin:OutSum:InvId:Password1)
+
+    Parameters
+    ----------
+    invoice_number : int
+        Unique invoice number (InvId).
+    amount : Decimal
+        Payment amount in RUB.
+    description : str
+        Payment description shown to the user.
+    user_email : str, optional
+        Buyer email for the receipt.
+
+    Returns
+    -------
+    str
+        Full URL to redirect the user to Robokassa.
+    """
+    merchant_login = settings.ROBOKASSA_MERCHANT_LOGIN
+    password1 = settings.ROBOKASSA_PASSWORD_1
+
+    if not merchant_login or not password1:
+        raise ValueError("Robokassa credentials are not configured")
+
+    out_sum = f"{amount:.2f}"
+
+    # --- Receipt (54-FZ) — raw JSON string ---
+    receipt_json = _build_receipt(description, amount)
+
+    # --- Signature ---
+    # IMPORTANT: use raw JSON in signature, NOT url-encoded
+    sign_string = f"{merchant_login}:{out_sum}:{invoice_number}:{receipt_json}:{password1}"
+    signature = _md5(sign_string)
+
+    # --- Build URL via urlencode ---
+    base_url = "https://auth.robokassa.ru/Merchant/Index.aspx"
+
+    params: dict = {
+        "MerchantLogin": merchant_login,
+        "OutSum": out_sum,
+        "InvId": invoice_number,
+        "Description": description,
+        "SignatureValue": signature,
+        "Receipt": receipt_json,
+        "Culture": "ru",
+    }
+
+    if user_email:
+        params["Email"] = user_email
+
+    if settings.ROBOKASSA_TEST_MODE:
+        params["IsTest"] = 1
+
+    url = f"{base_url}?{urlencode(params)}"
+
+    logger.info(
+        f"Generated Robokassa URL: InvId={invoice_number}, amount={out_sum}, "
+        f"test_mode={settings.ROBOKASSA_TEST_MODE}"
+    )
+    return url
+
+
+def verify_result_signature(out_sum: str, inv_id: str, signature: str) -> bool:
+    """
+    Verify the signature on Robokassa Result URL callback.
+
+    Expected: MD5(OutSum:InvId:Password2)
+
+    Parameters
+    ----------
+    out_sum : str
+        The OutSum parameter from the callback.
+    inv_id : str
+        The InvId parameter from the callback.
+    signature : str
+        The SignatureValue parameter from the callback.
+
+    Returns
+    -------
+    bool
+        True if the signature is valid.
+    """
+    password2 = settings.ROBOKASSA_PASSWORD_2
+    if not password2:
+        logger.error("ROBOKASSA_PASSWORD_2 is not configured")
+        return False
+
+    expected = _md5(f"{out_sum}:{inv_id}:{password2}")
+    result = expected.lower() == signature.lower()
+
+    if not result:
+        logger.warning(
+            f"Signature mismatch for InvId={inv_id}: "
+            f"expected={expected}, received={signature}"
         )
-        if user_email:
-            params += f"&Email={quote(user_email)}"
-        if is_test:
-            params += "&IsTest=1"
 
-        return f"{base_url}?{params}"
+    return result
 
-    def verify_callback_signature(
-        self, out_sum: str, inv_id: str, signature_value: str
-    ) -> bool:
-        """Verify callback signature from Robokassa (Password2)."""
-        password2 = settings.ROBOKASSA_PASSWORD_2
-        expected = hashlib.md5(
-            f"{out_sum}:{inv_id}:{password2}".encode()
-        ).hexdigest().upper()
-        return expected == signature_value.upper()
+
+# ---------------------------------------------------------------------------
+# Case purchase business logic
+# ---------------------------------------------------------------------------
+
+class PaymentService:
+    """High-level service for case purchase payments."""
 
     async def create_purchase_payment(
         self, user: User, case: Case, db: AsyncSession
@@ -89,7 +183,7 @@ class PaymentService:
         if price <= 0:
             raise ValueError("Case is free, no payment needed")
 
-        # Check for existing purchase record (any status)
+        # Check for existing purchase record
         existing = await db.execute(
             select(CasePurchase).where(
                 CasePurchase.user_id == user.id,
@@ -99,11 +193,10 @@ class PaymentService:
         purchase = existing.scalar_one_or_none()
 
         if purchase:
-            # Already paid — no need to pay again
             if purchase.status == "completed":
                 raise ValueError("Case already purchased")
 
-            # Pending or cancelled — reuse the record with a new invoice
+            # Reuse pending/cancelled/failed record with a new invoice
             result = await db.execute(text("SELECT nextval('invoice_number_seq')"))
             invoice_number = result.scalar()
 
@@ -114,7 +207,7 @@ class PaymentService:
             purchase.callback_data = None
             await db.flush()
         else:
-            # First time buying — create new record
+            # First time — create new record
             result = await db.execute(text("SELECT nextval('invoice_number_seq')"))
             invoice_number = result.scalar()
 
@@ -131,7 +224,7 @@ class PaymentService:
 
         # Generate payment URL
         description = f"Покупка дела: {case.title}"
-        payment_url = self.generate_payment_url(
+        payment_url = generate_payment_url(
             invoice_number=invoice_number,
             amount=price,
             description=description,
@@ -147,14 +240,23 @@ class PaymentService:
         }
 
     async def process_callback(
-        self, out_sum: str, inv_id: str, signature_value: str, db: AsyncSession
+        self,
+        out_sum: str,
+        inv_id: str,
+        signature_value: str,
+        db: AsyncSession,
     ) -> str:
-        """Process Robokassa Result URL callback (server-to-server)."""
+        """
+        Process Robokassa Result URL callback (server-to-server).
+
+        Returns "OK{InvId}" on success — required by Robokassa.
+        Raises ValueError on any validation failure.
+        """
         # 1. Verify signature
-        if not self.verify_callback_signature(out_sum, inv_id, signature_value):
+        if not verify_result_signature(out_sum, inv_id, signature_value):
             raise ValueError("Invalid signature")
 
-        # 2. Find purchase
+        # 2. Find purchase (with row lock)
         result = await db.execute(
             select(CasePurchase)
             .where(CasePurchase.invoice_number == int(inv_id))
@@ -169,12 +271,19 @@ class PaymentService:
             return f"OK{inv_id}"
 
         # 4. Validate amount
-        callback_amount = Decimal(out_sum).quantize(Decimal("0.01"))
-        expected_amount = Decimal(str(purchase.amount)).quantize(Decimal("0.01"))
+        try:
+            callback_amount = Decimal(out_sum).quantize(Decimal("0.01"))
+            expected_amount = Decimal(str(purchase.amount)).quantize(Decimal("0.01"))
+        except (InvalidOperation, AttributeError) as e:
+            logger.error(f"Cannot parse amount for InvId={inv_id}: {e}")
+            raise ValueError(f"Invalid amount format: {out_sum}")
+
         if callback_amount != expected_amount:
             purchase.status = "failed"
             await db.commit()
-            raise ValueError(f"Amount mismatch: {callback_amount} != {expected_amount}")
+            raise ValueError(
+                f"Amount mismatch: received={callback_amount}, expected={expected_amount}"
+            )
 
         # 5. Activate purchase
         purchase.status = "completed"
@@ -186,6 +295,7 @@ class PaymentService:
         }
 
         await db.commit()
+        logger.info(f"Payment processed successfully: InvId={inv_id}")
         return f"OK{inv_id}"
 
     async def has_access(

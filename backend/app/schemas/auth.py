@@ -1,15 +1,14 @@
-from pydantic import BaseModel
-from typing import Optional
+from pydantic import BaseModel, EmailStr
 
 
 class RegisterRequest(BaseModel):
     username: str
+    email: EmailStr
     password: str
-    email: Optional[str] = None
 
 
 class LoginRequest(BaseModel):
-    username: str
+    email: EmailStr
     password: str
 
 
@@ -21,7 +20,8 @@ class TokenResponse(BaseModel):
 class UserResponse(BaseModel):
     id: str
     username: str
-    email: Optional[str] = None
+    email: str
+    is_admin: bool = False
 
     class Config:
         from_attributes = True

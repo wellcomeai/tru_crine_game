@@ -72,6 +72,7 @@ class CaseGenerator:
         theme: str | None = None,
         difficulty: str = "medium",
         num_suspects: int = 4,
+        num_locations: int = 5,
         setting: str | None = None,
     ) -> dict:
         result = {"status": "in_progress", "steps": [], "errors": []}
@@ -79,7 +80,8 @@ class CaseGenerator:
         try:
             async for progress in self.generate_full_case_with_progress(
                 db=db, theme=theme, difficulty=difficulty,
-                num_suspects=num_suspects, setting=setting,
+                num_suspects=num_suspects, num_locations=num_locations,
+                setting=setting,
             ):
                 if progress.get("status") == "in_progress":
                     step_name = progress.get("step_name", f"step_{progress.get('step', '?')}")
@@ -109,6 +111,7 @@ class CaseGenerator:
         theme: str | None = None,
         difficulty: str = "medium",
         num_suspects: int = 4,
+        num_locations: int = 5,
         setting: str | None = None,
     ) -> AsyncGenerator[dict, None]:
         """Generate case with step-by-step progress updates."""
@@ -119,7 +122,7 @@ class CaseGenerator:
         yield {"step": 1, "total": total_steps, "step_name": "plot_generation",
                "message": "Генерация сюжета...", "status": "in_progress"}
         logger.info("Step 1/%d: Generating plot...", total_steps)
-        case_data = await self._generate_plot(theme, difficulty, num_suspects, setting)
+        case_data = await self._generate_plot(theme, difficulty, num_suspects, num_locations, setting)
 
         # Step 2: Validation
         yield {"step": 2, "total": total_steps, "step_name": "validation",
@@ -222,6 +225,7 @@ class CaseGenerator:
         theme: str | None,
         difficulty: str,
         num_suspects: int,
+        num_locations: int,
         setting: str | None,
     ) -> dict:
         theme_instruction = ""
@@ -231,11 +235,17 @@ class CaseGenerator:
             theme_instruction += f"\nСЕТТИНГ: {setting}"
 
         difficulty_hints = {
-            "easy": "3 подозреваемых, более очевидные улики, менее сложные связи",
-            "medium": "4 подозреваемых, умеренная сложность, несколько ложных следов",
-            "hard": "5 подозреваемых, сложные связи, много ложных следов, неочевидный мотив",
+            "easy": "более очевидные улики, менее сложные связи",
+            "medium": "умеренная сложность, несколько ложных следов",
+            "hard": "сложные связи, много ложных следов, неочевидный мотив",
         }
         diff_hint = difficulty_hints.get(difficulty, difficulty_hints["medium"])
+
+        # Dynamic evidence and connection counts based on suspects + locations
+        num_evidence_min = max(6, num_suspects + num_locations)
+        num_evidence_max = num_evidence_min + 5
+        num_key_evidence = max(3, num_evidence_min // 2)
+        min_connections = max(6, num_evidence_min // 2 + 2)
 
         system_prompt = f"""Ты — сценарист детективных игр.
 Создай полноценное детективное дело в формате JSON.
@@ -245,6 +255,7 @@ Slugs и id — на латинице (snake_case).
 
 СЛОЖНОСТЬ: {difficulty} ({diff_hint})
 КОЛИЧЕСТВО ПОДОЗРЕВАЕМЫХ: {num_suspects}
+КОЛИЧЕСТВО ЛОКАЦИЙ: {num_locations}
 {theme_instruction}
 
 ОБЯЗАТЕЛЬНАЯ СТРУКТУРА JSON:
@@ -386,13 +397,14 @@ Slugs и id — на латинице (snake_case).
 ПРАВИЛА:
 1. Жертва указана в описании, НЕ включать в characters.
 2. Ровно один персонаж с is_guilty=true. solution.guilty = его slug.
-3. Локации: 4-6 штук. Первая — is_initial=true. Остальные — is_initial=false.
+3. Локации: РОВНО {num_locations} штук. Первая — is_initial=true. Остальные — is_initial=false.
 4. POI: 2-4 на локацию. Не все с уликами (evidence_slug=null для атмосферных).
-5. Улики: 8-12 штук. key_evidence — 4-6 штук.
-6. Связи: минимум 6.
+5. Улики: {num_evidence_min}-{num_evidence_max} штук. key_evidence — {num_key_evidence}-{num_key_evidence + 2} штук.
+6. Связи: минимум {min_connections}.
 7. Slugs: уникальные, snake_case, латиница.
 8. POI координаты: примерные позиции, раскидать по изображению.
 9. ai_system_prompt: подробно описать речевую манеру, что скрывает, как реагирует.
+10. Персонажей (подозреваемых): РОВНО {num_suspects} штук. Ровно один с is_guilty=true.
 
 Ответь ТОЛЬКО валидным JSON. Без markdown, без комментариев."""
 
@@ -855,6 +867,30 @@ Slugs и id — на латинице (snake_case).
 
         await db.commit()
         return case.id
+
+    # ─────────────────────────────────────────────
+    # PUBLIC: Image regeneration methods
+    # ─────────────────────────────────────────────
+
+    async def regenerate_cover(self, case_slug: str, case_info: dict) -> str:
+        """Regenerate cover image. Returns new image path/URL."""
+        return await self._generate_cover_image(case_info, case_slug)
+
+    async def regenerate_location_image(self, case_slug: str, loc_data: dict) -> tuple[str, bytes | None]:
+        """Regenerate location image. Returns (path, raw_bytes)."""
+        return await self._generate_location_image(loc_data, case_slug)
+
+    async def regenerate_avatar(self, case_slug: str, char_data: dict) -> str:
+        """Regenerate character avatar. Returns new image path/URL."""
+        return await self._generate_avatar(char_data, case_slug)
+
+    async def regenerate_evidence_image(self, case_slug: str, ev_data: dict) -> str:
+        """Regenerate evidence image. Returns new image path/URL."""
+        return await self._generate_evidence_image(ev_data, case_slug)
+
+    async def recalibrate_pois(self, image_bytes: bytes, pois: list[dict], location_name: str, location_description: str) -> list[dict]:
+        """Recalibrate POI positions for a location image."""
+        return await self._calibrate_pois_from_bytes(image_bytes, pois, location_name, location_description)
 
 
 case_generator = CaseGenerator()

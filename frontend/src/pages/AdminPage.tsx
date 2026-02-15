@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import api from '../api/client';
 import { useAuthStore } from '../stores/authStore';
-import { Loader2, Check, X, Eye, EyeOff, Trash2, ArrowLeft } from 'lucide-react';
+import { Loader2, Check, X, Eye, EyeOff, Trash2, ArrowLeft, FileSearch } from 'lucide-react';
 
 interface AdminCase {
   id: string;
@@ -36,6 +36,7 @@ export default function AdminPage() {
   const [setting, setSetting] = useState('');
   const [difficulty, setDifficulty] = useState('medium');
   const [numSuspects, setNumSuspects] = useState(4);
+  const [numLocations, setNumLocations] = useState(5);
 
   useEffect(() => {
     if (!isAdmin) {
@@ -72,6 +73,7 @@ export default function AdminPage() {
           setting: setting || null,
           difficulty,
           num_suspects: numSuspects,
+          num_locations: numLocations,
         }),
       });
 
@@ -156,7 +158,7 @@ export default function AdminPage() {
         <section>
           <h2 className="text-lg font-semibold text-gray-300 mb-4">Сгенерировать новое дело</h2>
           <div className="bg-neutral-900 border border-neutral-800 rounded-xl p-6 space-y-4">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <div>
                 <label className="block text-sm text-gray-500 mb-1">Тема</label>
                 <input
@@ -196,9 +198,21 @@ export default function AdminPage() {
                   onChange={(e) => setNumSuspects(Number(e.target.value))}
                   className="w-full bg-neutral-800 border border-neutral-700 rounded-lg px-3 py-2 text-sm text-gray-200 focus:outline-none focus:border-amber-600"
                 >
-                  <option value={3}>3</option>
-                  <option value={4}>4</option>
-                  <option value={5}>5</option>
+                  {Array.from({ length: 13 }, (_, i) => i + 3).map((n) => (
+                    <option key={n} value={n}>{n}</option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <label className="block text-sm text-gray-500 mb-1">Локаций</label>
+                <select
+                  value={numLocations}
+                  onChange={(e) => setNumLocations(Number(e.target.value))}
+                  className="w-full bg-neutral-800 border border-neutral-700 rounded-lg px-3 py-2 text-sm text-gray-200 focus:outline-none focus:border-amber-600"
+                >
+                  {Array.from({ length: 8 }, (_, i) => i + 3).map((n) => (
+                    <option key={n} value={n}>{n}</option>
+                  ))}
                 </select>
               </div>
             </div>
@@ -295,6 +309,13 @@ export default function AdminPage() {
                     </td>
                     <td className="px-4 py-3">
                       <div className="flex items-center gap-2">
+                        <button
+                          onClick={() => navigate(`/admin/cases/${c.id}/preview`)}
+                          title="Превью"
+                          className="p-1 text-gray-500 hover:text-blue-400 transition-colors"
+                        >
+                          <FileSearch size={16} />
+                        </button>
                         {c.is_published ? (
                           <button
                             onClick={() => handleUnpublish(c.id)}

@@ -5,17 +5,17 @@ import { toast } from 'sonner';
 
 export default function RegisterForm() {
   const [username, setUsername] = useState('');
-  const [password, setPassword] = useState('');
   const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const { register } = useAuthStore();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!username || !password) return;
+    if (!username || !email || !password) return;
     setLoading(true);
     try {
-      await register(username, password, email || undefined);
+      await register(username, email, password);
     } catch (err: any) {
       toast.error(err.response?.data?.detail || 'Ошибка регистрации');
     } finally {
@@ -36,7 +36,7 @@ export default function RegisterForm() {
         />
       </div>
       <div>
-        <label className="text-sm text-gray-400 block mb-1">Email (необязательно)</label>
+        <label className="text-sm text-gray-400 block mb-1">Email</label>
         <input
           type="email"
           value={email}

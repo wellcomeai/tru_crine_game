@@ -1,15 +1,13 @@
 import { create } from 'zustand';
 import api from '../api/client';
 
-const ADMIN_EMAIL = 'well96well@gmail.com';
-
 interface AuthState {
   token: string | null;
-  user: { id: string; username: string; email?: string } | null;
+  user: { id: string; username: string; email?: string; isAdmin?: boolean } | null;
   isAuthenticated: boolean;
   isAdmin: boolean;
-  login: (username: string, password: string) => Promise<void>;
-  register: (username: string, password: string, email?: string) => Promise<void>;
+  login: (email: string, password: string) => Promise<void>;
+  register: (username: string, email: string, password: string) => Promise<void>;
   logout: () => void;
   loadFromStorage: () => void;
 }
@@ -30,7 +28,7 @@ export const useAuthStore = create<AuthState>((set) => ({
           token,
           user,
           isAuthenticated: true,
-          isAdmin: user.email === ADMIN_EMAIL,
+          isAdmin: user.isAdmin || false,
         });
       } catch {
         localStorage.removeItem('token');
@@ -39,8 +37,8 @@ export const useAuthStore = create<AuthState>((set) => ({
     }
   },
 
-  login: async (username: string, password: string) => {
-    const { data } = await api.post('/auth/login', { username, password });
+  login: async (email: string, password: string) => {
+    const { data } = await api.post('/auth/login', { email, password });
     const token = data.access_token;
     localStorage.setItem('token', token);
 
@@ -51,6 +49,7 @@ export const useAuthStore = create<AuthState>((set) => ({
       id: userRes.data.id,
       username: userRes.data.username,
       email: userRes.data.email,
+      isAdmin: userRes.data.is_admin,
     };
     localStorage.setItem('user', JSON.stringify(user));
 
@@ -58,12 +57,12 @@ export const useAuthStore = create<AuthState>((set) => ({
       token,
       user,
       isAuthenticated: true,
-      isAdmin: user.email === ADMIN_EMAIL,
+      isAdmin: user.isAdmin || false,
     });
   },
 
-  register: async (username: string, password: string, email?: string) => {
-    const { data } = await api.post('/auth/register', { username, password, email });
+  register: async (username: string, email: string, password: string) => {
+    const { data } = await api.post('/auth/register', { username, email, password });
     const token = data.access_token;
     localStorage.setItem('token', token);
 
@@ -74,6 +73,7 @@ export const useAuthStore = create<AuthState>((set) => ({
       id: userRes.data.id,
       username: userRes.data.username,
       email: userRes.data.email,
+      isAdmin: userRes.data.is_admin,
     };
     localStorage.setItem('user', JSON.stringify(user));
 
@@ -81,7 +81,7 @@ export const useAuthStore = create<AuthState>((set) => ({
       token,
       user,
       isAuthenticated: true,
-      isAdmin: user.email === ADMIN_EMAIL,
+      isAdmin: user.isAdmin || false,
     });
   },
 

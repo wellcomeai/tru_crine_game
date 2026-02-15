@@ -13,6 +13,7 @@ import NotebookPage from './pages/NotebookPage';
 import AccusationPage from './pages/AccusationPage';
 import ResultPage from './pages/ResultPage';
 import AdminPage from './pages/AdminPage';
+import AdminCasePreviewPage from './pages/AdminCasePreviewPage';
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const { isAuthenticated } = useAuthStore();
@@ -102,6 +103,14 @@ export default function App() {
           element={
             <ProtectedRoute>
               <AdminPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/admin/cases/:caseId/preview"
+          element={
+            <ProtectedRoute>
+              <AdminCasePreviewPage />
             </ProtectedRoute>
           }
         />

@@ -19,6 +19,7 @@ interface CasePreviewModalProps {
   } | null;
   onStart: (caseId: string) => void;
   loading?: boolean;
+  sessionStatus?: string | null;
 }
 
 const DIFFICULTY_META: Record<string, { text: string; stars: number; time: string }> = {
@@ -27,7 +28,7 @@ const DIFFICULTY_META: Record<string, { text: string; stars: number; time: strin
   hard: { text: 'Сложное', stars: 3, time: '~60 мин' },
 };
 
-export default function CasePreviewModal({ isOpen, onClose, caseData, onStart, loading }: CasePreviewModalProps) {
+export default function CasePreviewModal({ isOpen, onClose, caseData, onStart, loading, sessionStatus }: CasePreviewModalProps) {
   if (!caseData) return null;
 
   const meta = DIFFICULTY_META[caseData.difficulty] || DIFFICULTY_META.medium;
@@ -148,6 +149,14 @@ export default function CasePreviewModal({ isOpen, onClose, caseData, onStart, l
                   >
                     {loading ? (
                       'Загрузка...'
+                    ) : sessionStatus === 'active' ? (
+                      <>
+                        Продолжить расследование <ChevronRight size={16} />
+                      </>
+                    ) : sessionStatus === 'completed' ? (
+                      <>
+                        Начать заново <ChevronRight size={16} />
+                      </>
                     ) : (
                       <>
                         Начать расследование <ChevronRight size={16} />

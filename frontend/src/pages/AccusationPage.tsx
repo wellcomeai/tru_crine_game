@@ -113,7 +113,22 @@ export default function AccusationPage() {
                           : 'border-noir-600 bg-noir-800 hover:border-noir-500'
                       }`}
                     >
-                      <div className="w-10 h-10 rounded-full bg-noir-700 flex items-center justify-center text-gold font-bold text-sm">
+                      {char.avatar ? (
+                        <img
+                          src={getImageUrl(char.avatar)}
+                          alt={char.name}
+                          className="w-10 h-10 rounded-full object-cover flex-shrink-0"
+                          onError={(e) => {
+                            (e.target as HTMLImageElement).style.display = 'none';
+                            (e.target as HTMLImageElement).nextElementSibling?.classList.remove('hidden');
+                          }}
+                        />
+                      ) : null}
+                      <div
+                        className={`w-10 h-10 rounded-full bg-noir-700 flex items-center justify-center text-gold font-bold text-sm flex-shrink-0 ${
+                          char.avatar ? 'hidden' : ''
+                        }`}
+                      >
                         {getInitials(char.name)}
                       </div>
                       <div>

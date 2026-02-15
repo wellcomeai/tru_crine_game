@@ -553,11 +553,14 @@ class GameEngine:
         suspect_correct = accusation_data["accused_slug"] == solution["guilty"]
         suspect_score = 500 if suspect_correct else 0
         total_score += suspect_score
-        breakdown["suspect"] = {
+        suspect_breakdown = {
             "correct": suspect_correct,
             "score": suspect_score,
-            "correct_answer": solution["guilty"],
         }
+        # Only reveal the correct answer when the accusation is correct
+        if suspect_correct:
+            suspect_breakdown["correct_answer"] = solution["guilty"]
+        breakdown["suspect"] = suspect_breakdown
 
         # 2. Motive (0-200 via AI)
         motive_result = await ai_service.evaluate_motive(
@@ -602,8 +605,10 @@ class GameEngine:
             "details": "Без подсказок" if bonus_score > 0 else "Использованы подсказки",
         }
 
-        # Generate story summary
-        story_summary = await ai_service.generate_story_summary(solution, total_score)
+        # Generate story summary only for correct accusations
+        story_summary = ""
+        if suspect_correct:
+            story_summary = await ai_service.generate_story_summary(solution, total_score)
 
         # Save accusation
         accusation = Accusation(
@@ -621,10 +626,11 @@ class GameEngine:
         )
         db.add(accusation)
 
-        # Update session
-        session.status = "completed"
-        session.completed_at = datetime.utcnow()
-        session.score = total_score
+        # Only mark session as completed if the accusation is correct
+        if suspect_correct:
+            session.status = "completed"
+            session.completed_at = datetime.utcnow()
+            session.score = total_score
         await db.commit()
 
         return {

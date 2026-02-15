@@ -7,7 +7,7 @@ import { useGameStore } from '../stores/gameStore';
 import Button from '../components/UI/Button';
 import LoadingSpinner from '../components/UI/LoadingSpinner';
 import CasePreviewModal from '../components/Game/CasePreviewModal';
-import { LogOut, Clock, BarChart3, Settings } from 'lucide-react';
+import { LogOut, Clock, BarChart3, Settings, CheckCircle, Play } from 'lucide-react';
 import { getImageUrl } from '../utils/helpers';
 import { DIFFICULTY_LABELS } from '../utils/constants';
 import type { Case } from '../types';
@@ -29,6 +29,7 @@ export default function CasesPage() {
   const { startCase } = useGameStore();
 
   const [previewCase, setPreviewCase] = useState<CaseDetail | null>(null);
+  const [previewCaseItem, setPreviewCaseItem] = useState<Case | null>(null);
   const [previewOpen, setPreviewOpen] = useState(false);
   const [previewLoading, setPreviewLoading] = useState(false);
 
@@ -39,6 +40,7 @@ export default function CasesPage() {
   }, []);
 
   const handleCaseClick = async (caseItem: Case) => {
+    setPreviewCaseItem(caseItem);
     setPreviewOpen(true);
     setPreviewLoading(true);
     try {
@@ -51,15 +53,24 @@ export default function CasesPage() {
     }
   };
 
-  const handleStartFromPreview = async (caseId: string) => {
-    setPreviewOpen(false);
-    const sessionId = await startCase(caseId);
-    navigate(`/game/${sessionId}`);
+  const handleStartOrContinue = async (caseItem: Case) => {
+    if (caseItem.user_session?.status === 'active') {
+      navigate(`/game/${caseItem.user_session.session_id}`);
+    } else {
+      const sessionId = await startCase(caseItem.id);
+      navigate(`/game/${sessionId}`);
+    }
   };
 
-  const handleStart = async (caseId: string) => {
-    const sessionId = await startCase(caseId);
-    navigate(`/game/${sessionId}`);
+  const handleStartFromPreview = async (caseId: string) => {
+    setPreviewOpen(false);
+    const c = cases.find((x) => x.id === caseId);
+    if (c?.user_session?.status === 'active') {
+      navigate(`/game/${c.user_session.session_id}`);
+    } else {
+      const sessionId = await startCase(caseId);
+      navigate(`/game/${sessionId}`);
+    }
   };
 
   return (
@@ -126,6 +137,19 @@ export default function CasesPage() {
                   <div className="absolute bottom-3 left-3">
                     <h3 className="font-serif text-lg font-bold text-gray-100">{c.title}</h3>
                   </div>
+                  {/* Status badge */}
+                  {c.user_session?.status === 'completed' && (
+                    <div className="absolute top-3 right-3 flex items-center gap-1.5 px-3 py-1.5 bg-green-900/80 border border-green-600/50 rounded-lg text-green-300 text-xs font-medium backdrop-blur-sm">
+                      <CheckCircle size={14} />
+                      Расследование завершено
+                    </div>
+                  )}
+                  {c.user_session?.status === 'active' && (
+                    <div className="absolute top-3 right-3 flex items-center gap-1.5 px-3 py-1.5 bg-amber-900/80 border border-amber-600/50 rounded-lg text-amber-300 text-xs font-medium backdrop-blur-sm">
+                      <Play size={14} />
+                      В процессе
+                    </div>
+                  )}
                 </div>
 
                 {/* Info */}
@@ -141,16 +165,41 @@ export default function CasesPage() {
                       ~{c.estimated_time_min} мин
                     </span>
                   </div>
-                  <Button
-                    onClick={(e: React.MouseEvent) => {
-                      e.stopPropagation();
-                      handleStart(c.id);
-                    }}
-                    className="w-full"
-                    size="sm"
-                  >
-                    Начать расследование
-                  </Button>
+                  {c.user_session?.status === 'completed' ? (
+                    <Button
+                      onClick={(e: React.MouseEvent) => {
+                        e.stopPropagation();
+                        handleStartOrContinue(c);
+                      }}
+                      className="w-full"
+                      size="sm"
+                      variant="secondary"
+                    >
+                      Начать заново
+                    </Button>
+                  ) : c.user_session?.status === 'active' ? (
+                    <Button
+                      onClick={(e: React.MouseEvent) => {
+                        e.stopPropagation();
+                        handleStartOrContinue(c);
+                      }}
+                      className="w-full"
+                      size="sm"
+                    >
+                      Продолжить расследование
+                    </Button>
+                  ) : (
+                    <Button
+                      onClick={(e: React.MouseEvent) => {
+                        e.stopPropagation();
+                        handleStartOrContinue(c);
+                      }}
+                      className="w-full"
+                      size="sm"
+                    >
+                      Начать расследование
+                    </Button>
+                  )}
                 </div>
               </motion.div>
             ))}
@@ -164,6 +213,7 @@ export default function CasesPage() {
         caseData={previewCase}
         onStart={handleStartFromPreview}
         loading={previewLoading}
+        sessionStatus={previewCaseItem?.user_session?.status}
       />
     </div>
   );

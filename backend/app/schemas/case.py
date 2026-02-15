@@ -12,6 +12,12 @@ class PhaseSchema(BaseModel):
     is_locked: bool = False
 
 
+class UserSessionInfo(BaseModel):
+    session_id: str
+    status: str
+    score: Optional[int] = None
+
+
 class CaseListItem(BaseModel):
     id: str
     slug: str
@@ -21,6 +27,7 @@ class CaseListItem(BaseModel):
     estimated_time_min: int
     cover_image: Optional[str] = None
     is_published: bool
+    user_session: Optional[UserSessionInfo] = None
 
     class Config:
         from_attributes = True

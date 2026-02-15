@@ -1,3 +1,9 @@
+export interface UserSessionInfo {
+  session_id: string;
+  status: string;
+  score: number | null;
+}
+
 export interface Case {
   id: string;
   slug: string;
@@ -7,6 +13,7 @@ export interface Case {
   estimated_time_min: number;
   cover_image: string | null;
   phases: Phase[];
+  user_session?: UserSessionInfo | null;
 }
 
 export interface Phase {
@@ -110,7 +117,7 @@ export interface AccusationResult {
   total_score: number;
   max_score: number;
   breakdown: {
-    suspect: { correct: boolean; score: number; correct_answer: string };
+    suspect: { correct: boolean; score: number; correct_answer?: string };
     motive: { score: number; feedback: string };
     method: { score: number; feedback: string };
     evidence: { score: number; details: string };

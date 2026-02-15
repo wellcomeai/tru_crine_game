@@ -4,6 +4,7 @@ Access restricted to ADMIN_EMAIL.
 """
 
 import json
+import time
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException
@@ -267,12 +268,20 @@ async def regenerate_image(
 
     case_slug = case.slug
 
+    def _cache_bust(url: str) -> str:
+        """Append cache-busting query param so browsers/CDN fetch the new image."""
+        if not url:
+            return url
+        separator = "&" if "?" in url else "?"
+        return f"{url}{separator}v={int(time.time())}"
+
     if req.entity_type == "cover":
         case_info = {
             "title": case.title,
             "description": case.description,
         }
         new_url = await case_generator.regenerate_cover(case_slug, case_info)
+        new_url = _cache_bust(new_url)
         case.cover_image = new_url
         await db.commit()
         return {"status": "ok", "new_image_url": new_url}
@@ -295,6 +304,7 @@ async def regenerate_image(
             "points_of_interest": location.points_of_interest or [],
         }
         img_path, img_bytes = await case_generator.regenerate_location_image(case_slug, loc_data)
+        img_path = _cache_bust(img_path)
         location.image = img_path
 
         # Recalibrate POIs if we got image bytes
@@ -328,6 +338,7 @@ async def regenerate_image(
             "personality": character.personality,
         }
         new_url = await case_generator.regenerate_avatar(case_slug, char_data)
+        new_url = _cache_bust(new_url)
         character.avatar = new_url
         await db.commit()
         return {"status": "ok", "new_image_url": new_url}
@@ -351,6 +362,7 @@ async def regenerate_image(
             "detailed_description": evidence.detailed_description,
         }
         new_url = await case_generator.regenerate_evidence_image(case_slug, ev_data)
+        new_url = _cache_bust(new_url)
         evidence.image = new_url
         await db.commit()
         return {"status": "ok", "new_image_url": new_url}

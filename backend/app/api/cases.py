@@ -1,21 +1,65 @@
+from typing import Optional
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Request
+from jose import JWTError, jwt
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.config import settings
 from app.database import get_db
 from app.models import Case, GameSession, GameState, Character, User
-from app.schemas.case import CaseListItem, CaseDetail, StartCaseResponse, PhaseSchema
+from app.schemas.case import CaseListItem, CaseDetail, StartCaseResponse, PhaseSchema, UserSessionInfo
 from app.services.auth_service import get_current_user
 
 router = APIRouter()
 
 
+async def get_current_user_optional(
+    request: Request, db: AsyncSession = Depends(get_db),
+) -> Optional[User]:
+    """Try to get the current user; return None if not authenticated."""
+    auth_header = request.headers.get("Authorization")
+    if not auth_header or not auth_header.startswith("Bearer "):
+        return None
+    token = auth_header.split(" ", 1)[1]
+    try:
+        payload = jwt.decode(token, settings.SECRET_KEY, algorithms=[settings.ALGORITHM])
+        user_id: str = payload.get("sub")
+        if user_id is None:
+            return None
+    except JWTError:
+        return None
+    result = await db.execute(select(User).where(User.id == UUID(user_id)))
+    return result.scalar_one_or_none()
+
+
 @router.get("/", response_model=list[CaseListItem])
-async def list_cases(db: AsyncSession = Depends(get_db)):
+async def list_cases(
+    db: AsyncSession = Depends(get_db),
+    current_user: Optional[User] = Depends(get_current_user_optional),
+):
     result = await db.execute(select(Case).where(Case.is_published == True))
     cases = result.scalars().all()
+
+    # Build user session map if authenticated
+    session_map: dict[str, UserSessionInfo] = {}
+    if current_user:
+        sessions_result = await db.execute(
+            select(GameSession)
+            .where(GameSession.user_id == current_user.id)
+            .order_by(GameSession.started_at.desc())
+        )
+        for s in sessions_result.scalars().all():
+            case_id_str = str(s.case_id)
+            # Keep only the first (most recent) session per case
+            if case_id_str not in session_map:
+                session_map[case_id_str] = UserSessionInfo(
+                    session_id=str(s.id),
+                    status=s.status,
+                    score=s.score,
+                )
+
     return [
         CaseListItem(
             id=str(c.id),
@@ -26,6 +70,7 @@ async def list_cases(db: AsyncSession = Depends(get_db)):
             estimated_time_min=c.estimated_time_min,
             cover_image=c.cover_image,
             is_published=c.is_published,
+            user_session=session_map.get(str(c.id)),
         )
         for c in cases
     ]

@@ -14,16 +14,21 @@ router = APIRouter()
 
 @router.post("/register", response_model=TokenResponse)
 async def register(data: RegisterRequest, db: AsyncSession = Depends(get_db)):
+    if len(data.username) < 2:
+        raise HTTPException(status_code=400, detail="Имя пользователя слишком короткое (минимум 2 символа)")
+    if len(data.password) < 4:
+        raise HTTPException(status_code=400, detail="Пароль слишком короткий (минимум 4 символа)")
+
     # Check username
     result = await db.execute(select(User).where(User.username == data.username))
     if result.scalar_one_or_none():
-        raise HTTPException(status_code=400, detail="Username already taken")
+        raise HTTPException(status_code=400, detail="Это имя пользователя уже занято")
 
     # Check email
     if data.email:
         result = await db.execute(select(User).where(User.email == data.email))
         if result.scalar_one_or_none():
-            raise HTTPException(status_code=400, detail="Email already registered")
+            raise HTTPException(status_code=400, detail="Пользователь с таким email уже зарегистрирован")
 
     user = User(
         username=data.username,
@@ -43,7 +48,7 @@ async def login(data: LoginRequest, db: AsyncSession = Depends(get_db)):
     result = await db.execute(select(User).where(User.username == data.username))
     user = result.scalar_one_or_none()
     if not user or not verify_password(data.password, user.password_hash):
-        raise HTTPException(status_code=401, detail="Invalid credentials")
+        raise HTTPException(status_code=401, detail="Неверное имя пользователя или пароль")
 
     token = create_access_token({"sub": str(user.id)})
     return TokenResponse(access_token=token)

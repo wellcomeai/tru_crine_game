@@ -5,9 +5,11 @@ from typing import Optional, List
 class PhaseSchema(BaseModel):
     id: str
     name: str
-    description: str
+    description: str = ""
+    sort_order: int = 0
     is_completed: bool = False
     is_current: bool = False
+    is_locked: bool = False
 
 
 class CaseListItem(BaseModel):

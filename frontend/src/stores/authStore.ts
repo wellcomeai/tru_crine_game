@@ -1,10 +1,13 @@
 import { create } from 'zustand';
 import api from '../api/client';
 
+const ADMIN_EMAIL = 'well96well@gmail.com';
+
 interface AuthState {
   token: string | null;
-  user: { id: string; username: string } | null;
+  user: { id: string; username: string; email?: string } | null;
   isAuthenticated: boolean;
+  isAdmin: boolean;
   login: (username: string, password: string) => Promise<void>;
   register: (username: string, password: string, email?: string) => Promise<void>;
   logout: () => void;
@@ -15,6 +18,7 @@ export const useAuthStore = create<AuthState>((set) => ({
   token: null,
   user: null,
   isAuthenticated: false,
+  isAdmin: false,
 
   loadFromStorage: () => {
     const token = localStorage.getItem('token');
@@ -22,7 +26,12 @@ export const useAuthStore = create<AuthState>((set) => ({
     if (token && userStr) {
       try {
         const user = JSON.parse(userStr);
-        set({ token, user, isAuthenticated: true });
+        set({
+          token,
+          user,
+          isAuthenticated: true,
+          isAdmin: user.email === ADMIN_EMAIL,
+        });
       } catch {
         localStorage.removeItem('token');
         localStorage.removeItem('user');
@@ -35,14 +44,22 @@ export const useAuthStore = create<AuthState>((set) => ({
     const token = data.access_token;
     localStorage.setItem('token', token);
 
-    // Fetch user info
     const userRes = await api.get('/auth/me', {
       headers: { Authorization: `Bearer ${token}` },
     });
-    const user = { id: userRes.data.id, username: userRes.data.username };
+    const user = {
+      id: userRes.data.id,
+      username: userRes.data.username,
+      email: userRes.data.email,
+    };
     localStorage.setItem('user', JSON.stringify(user));
 
-    set({ token, user, isAuthenticated: true });
+    set({
+      token,
+      user,
+      isAuthenticated: true,
+      isAdmin: user.email === ADMIN_EMAIL,
+    });
   },
 
   register: async (username: string, password: string, email?: string) => {
@@ -53,15 +70,24 @@ export const useAuthStore = create<AuthState>((set) => ({
     const userRes = await api.get('/auth/me', {
       headers: { Authorization: `Bearer ${token}` },
     });
-    const user = { id: userRes.data.id, username: userRes.data.username };
+    const user = {
+      id: userRes.data.id,
+      username: userRes.data.username,
+      email: userRes.data.email,
+    };
     localStorage.setItem('user', JSON.stringify(user));
 
-    set({ token, user, isAuthenticated: true });
+    set({
+      token,
+      user,
+      isAuthenticated: true,
+      isAdmin: user.email === ADMIN_EMAIL,
+    });
   },
 
   logout: () => {
     localStorage.removeItem('token');
     localStorage.removeItem('user');
-    set({ token: null, user: null, isAuthenticated: false });
+    set({ token: null, user: null, isAuthenticated: false, isAdmin: false });
   },
 }));

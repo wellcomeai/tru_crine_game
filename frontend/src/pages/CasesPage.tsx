@@ -6,23 +6,56 @@ import { useAuthStore } from '../stores/authStore';
 import { useGameStore } from '../stores/gameStore';
 import Button from '../components/UI/Button';
 import LoadingSpinner from '../components/UI/LoadingSpinner';
-import { LogOut, Clock, BarChart3 } from 'lucide-react';
+import CasePreviewModal from '../components/Game/CasePreviewModal';
+import { LogOut, Clock, BarChart3, Settings } from 'lucide-react';
 import { getImageUrl } from '../utils/helpers';
 import { DIFFICULTY_LABELS } from '../utils/constants';
 import type { Case } from '../types';
+
+interface CaseDetail {
+  id: string;
+  title: string;
+  description: string | null;
+  difficulty: string;
+  cover_image?: string | null;
+  phases?: Array<{ id: string; name: string; description: string }>;
+}
 
 export default function CasesPage() {
   const [cases, setCases] = useState<Case[]>([]);
   const [loading, setLoading] = useState(true);
   const navigate = useNavigate();
-  const { user, logout } = useAuthStore();
+  const { user, logout, isAdmin } = useAuthStore();
   const { startCase } = useGameStore();
+
+  const [previewCase, setPreviewCase] = useState<CaseDetail | null>(null);
+  const [previewOpen, setPreviewOpen] = useState(false);
+  const [previewLoading, setPreviewLoading] = useState(false);
 
   useEffect(() => {
     api.get('/cases')
       .then(({ data }) => setCases(data))
       .finally(() => setLoading(false));
   }, []);
+
+  const handleCaseClick = async (caseItem: Case) => {
+    setPreviewOpen(true);
+    setPreviewLoading(true);
+    try {
+      const { data } = await api.get(`/cases/${caseItem.id}`);
+      setPreviewCase(data);
+    } catch (err) {
+      console.error('Failed to load case details:', err);
+    } finally {
+      setPreviewLoading(false);
+    }
+  };
+
+  const handleStartFromPreview = async (caseId: string) => {
+    setPreviewOpen(false);
+    const sessionId = await startCase(caseId);
+    navigate(`/game/${sessionId}`);
+  };
 
   const handleStart = async (caseId: string) => {
     const sessionId = await startCase(caseId);
@@ -36,6 +69,15 @@ export default function CasesPage() {
         <div className="max-w-6xl mx-auto px-6 py-4 flex items-center justify-between">
           <h1 className="font-serif text-2xl font-bold text-gold">DETECTIVE AI</h1>
           <div className="flex items-center gap-3">
+            {isAdmin && (
+              <button
+                onClick={() => navigate('/admin')}
+                className="text-gray-500 hover:text-amber-400 transition-colors"
+                title="Админ-панель"
+              >
+                <Settings size={18} />
+              </button>
+            )}
             <span className="text-gray-400 text-sm">{user?.username}</span>
             <button
               onClick={() => {
@@ -64,7 +106,8 @@ export default function CasesPage() {
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: i * 0.1 }}
-                className="glass rounded-xl overflow-hidden hover:border-gold-dim transition-colors"
+                className="glass rounded-xl overflow-hidden hover:border-gold-dim transition-colors cursor-pointer"
+                onClick={() => handleCaseClick(c)}
               >
                 {/* Cover */}
                 <div className="h-48 bg-noir-700 relative">
@@ -72,6 +115,7 @@ export default function CasesPage() {
                     <img
                       src={getImageUrl(c.cover_image)}
                       alt={c.title}
+                      loading="lazy"
                       className="w-full h-full object-cover"
                       onError={(e) => {
                         (e.target as HTMLImageElement).style.display = 'none';
@@ -97,7 +141,14 @@ export default function CasesPage() {
                       ~{c.estimated_time_min} мин
                     </span>
                   </div>
-                  <Button onClick={() => handleStart(c.id)} className="w-full" size="sm">
+                  <Button
+                    onClick={(e: React.MouseEvent) => {
+                      e.stopPropagation();
+                      handleStart(c.id);
+                    }}
+                    className="w-full"
+                    size="sm"
+                  >
                     Начать расследование
                   </Button>
                 </div>
@@ -106,6 +157,14 @@ export default function CasesPage() {
           </div>
         )}
       </div>
+
+      <CasePreviewModal
+        isOpen={previewOpen}
+        onClose={() => setPreviewOpen(false)}
+        caseData={previewCase}
+        onStart={handleStartFromPreview}
+        loading={previewLoading}
+      />
     </div>
   );
 }

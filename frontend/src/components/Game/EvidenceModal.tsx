@@ -39,6 +39,7 @@ export default function EvidenceModal({ isOpen, onClose, sessionId, evidenceSlug
             <img
               src={getImageUrl(evidence.image)}
               alt={evidence.name}
+              loading="lazy"
               className="w-full h-48 object-cover rounded-lg"
               onError={(e) => {
                 (e.target as HTMLImageElement).style.display = 'none';

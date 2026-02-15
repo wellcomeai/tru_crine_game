@@ -90,15 +90,27 @@ async def get_locations(
     )
     locations = locations_result.scalars().all()
 
+    all_locations = list(locations)
+
     result = []
-    for loc in locations:
+    for loc in all_locations:
         is_visited = loc.slug in (state.visited_locations or [])
 
-        # Determine if locked
-        is_locked = False
-        if not loc.is_initial and loc.unlock_conditions:
-            is_locked = not await game_engine.evaluate_conditions(
-                loc.unlock_conditions, state, db, session_id
+        # Determine if locked using sequential logic
+        is_locked = not await game_engine.is_location_accessible(
+            location=loc,
+            state=state,
+            all_locations=all_locations,
+            db=db,
+            session_id=session_id,
+        )
+
+        lock_reason = None
+        if is_locked:
+            lock_reason = game_engine.get_location_lock_reason(
+                location=loc,
+                state=state,
+                all_locations=all_locations,
             )
 
         # Build POIs with examined status
@@ -128,6 +140,7 @@ async def get_locations(
                 image=loc.image,
                 is_visited=is_visited,
                 is_locked=is_locked,
+                lock_reason=lock_reason,
                 points_of_interest=pois,
             )
         )
@@ -247,17 +260,28 @@ async def get_phases(
     )
     state = state_result.scalar_one()
 
+    phases_sorted = sorted(case.phases or [], key=lambda p: p.get("sort_order", 0))
     phases = []
-    for p in (case.phases or []):
+    for i, p in enumerate(phases_sorted):
         phase_id = p["id"]
         is_completed = phase_id in (state.unlocked_phases or [])
+
+        # Determine is_locked: not completed AND previous phase also not completed
+        is_locked = False
+        if not is_completed and i > 0:
+            prev_phase_id = phases_sorted[i - 1]["id"]
+            if prev_phase_id not in (state.unlocked_phases or []):
+                is_locked = True
+
         phases.append(
             PhaseSchema(
                 id=phase_id,
                 name=p["name"],
                 description=p.get("description", ""),
+                sort_order=p.get("sort_order", i),
                 is_completed=is_completed,
                 is_current=session.current_phase == phase_id,
+                is_locked=is_locked,
             )
         )
     return phases

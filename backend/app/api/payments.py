@@ -2,8 +2,8 @@
 Payment endpoints for case purchases.
 - POST /api/payments/buy/{case_id} - create payment, return URL
 - POST|GET /api/payments/result - Robokassa callback (server-to-server)
-- GET /api/payments/success - redirect after successful payment
-- GET /api/payments/fail - redirect after failed payment
+- GET|POST /api/payments/success - redirect after successful payment
+- GET|POST /api/payments/fail - redirect after failed payment
 """
 import logging
 from uuid import UUID
@@ -80,7 +80,7 @@ async def payment_result(request: Request, db: AsyncSession = Depends(get_db)):
         return PlainTextResponse(f"ERROR: {e}", status_code=400)
 
 
-@router.get("/success")
+@router.api_route("/success", methods=["GET", "POST"])
 async def payment_success():
     """Page after successful payment (user redirect)."""
     return HTMLResponse("""
@@ -96,7 +96,7 @@ async def payment_success():
     """)
 
 
-@router.get("/fail")
+@router.api_route("/fail", methods=["GET", "POST"])
 async def payment_fail():
     """Page after failed payment."""
     return HTMLResponse("""

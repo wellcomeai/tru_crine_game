@@ -152,40 +152,52 @@ def verify_result_signature(out_sum: str, inv_id: str, signature: str) -> bool:
         True if the signature is valid.
     """
     password2 = settings.ROBOKASSA_PASSWORD_2
+    password1 = settings.ROBOKASSA_PASSWORD_1
     if not password2:
         logger.error("ROBOKASSA_PASSWORD_2 is not configured")
         return False
 
     sig_lower = signature.lower()
 
-    # Try with the raw OutSum as received from Robokassa
-    expected_raw = _md5(f"{out_sum}:{inv_id}:{password2}")
-    if expected_raw.lower() == sig_lower:
-        return True
+    # Try all combinations of passwords and OutSum formats
+    passwords_to_try = {
+        "Password2": password2,
+        "Password1": password1,
+    }
+    sums_to_try = [out_sum]
 
-    # Robokassa may send OutSum with extra decimals (e.g. "1.000000")
-    # but compute signature with normalized format (e.g. "1.00")
-    # Try normalized to 2 decimal places
+    # Add normalized OutSum (2 decimal places)
     try:
-        normalized_sum = f"{Decimal(out_sum).quantize(Decimal('0.01'))}"
-        if normalized_sum != out_sum:
-            expected_norm = _md5(f"{normalized_sum}:{inv_id}:{password2}")
-            if expected_norm.lower() == sig_lower:
-                logger.info(
-                    f"Signature matched with normalized OutSum for InvId={inv_id}: "
-                    f"raw='{out_sum}' -> normalized='{normalized_sum}'"
-                )
-                return True
+        normalized = f"{Decimal(out_sum).quantize(Decimal('0.01'))}"
+        if normalized != out_sum:
+            sums_to_try.append(normalized)
     except (InvalidOperation, Exception):
         pass
 
-    # Nothing matched — log debug info
-    masked_pwd = password2[:3] + "***" + password2[-2:] if len(password2) > 5 else "***"
+    for pwd_name, pwd_value in passwords_to_try.items():
+        if not pwd_value:
+            continue
+        for s in sums_to_try:
+            expected = _md5(f"{s}:{inv_id}:{pwd_value}")
+            if expected.lower() == sig_lower:
+                if pwd_name == "Password2":
+                    logger.info(f"Signature OK for InvId={inv_id} (OutSum='{s}')")
+                else:
+                    logger.error(
+                        f"PASSWORDS SWAPPED! Signature matched with {pwd_name} "
+                        f"for InvId={inv_id}. Fix env vars: swap ROBOKASSA_PASSWORD_1 and ROBOKASSA_PASSWORD_2"
+                    )
+                return pwd_name == "Password2"
+
+    # Nothing matched at all — log debug info
+    masked_pwd1 = password1[:3] + "***" + password1[-2:] if password1 and len(password1) > 5 else "***"
+    masked_pwd2 = password2[:3] + "***" + password2[-2:] if len(password2) > 5 else "***"
     logger.warning(
         f"Signature mismatch for InvId={inv_id}: "
-        f"expected_raw={expected_raw}, received={signature}, "
+        f"received={signature}, "
         f"OutSum='{out_sum}', InvId='{inv_id}', "
-        f"Pwd2_masked='{masked_pwd}', Pwd2_len={len(password2)}"
+        f"Pwd1_masked='{masked_pwd1}', Pwd1_len={len(password1) if password1 else 0}, "
+        f"Pwd2_masked='{masked_pwd2}', Pwd2_len={len(password2)}"
     )
 
     return False

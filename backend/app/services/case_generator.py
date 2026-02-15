@@ -1,12 +1,13 @@
 """
 AI-powered case generation service.
 
-Full pipeline: plot -> validation -> cover -> location images -> POI calibration
--> avatars -> evidence images -> DB save.
+Full pipeline: plot -> validation -> parallel images -> POI calibration -> DB save.
 
 Images are stored in Cloudflare R2 (when configured) or local filesystem (fallback).
+Includes retry logic for all OpenAI API calls and parallel image generation.
 """
 
+import asyncio
 import json
 import logging
 import base64
@@ -32,6 +33,91 @@ class CaseGenerator:
 
     def __init__(self):
         self.client = AsyncOpenAI(api_key=settings.OPENAI_API_KEY)
+        self._image_sem = asyncio.Semaphore(4)  # Max 4 parallel image generations
+
+    # ─────────────────────────────────────────────
+    # Retry helpers
+    # ─────────────────────────────────────────────
+
+    async def _call_with_retry(
+        self,
+        coro_factory,
+        step_name: str,
+        max_retries: int = 3,
+        backoff: list[float] | None = None,
+    ):
+        """
+        Call coro_factory() with retry on JSONDecodeError or API errors.
+        coro_factory must be an async callable with no arguments.
+        """
+        if backoff is None:
+            backoff = [2.0, 5.0, 10.0]
+        last_error = None
+        for attempt in range(1, max_retries + 1):
+            try:
+                return await coro_factory()
+            except json.JSONDecodeError as e:
+                last_error = e
+                logger.warning("[%s] attempt %d/%d — JSONDecodeError: %s",
+                              step_name, attempt, max_retries, e)
+            except Exception as e:
+                last_error = e
+                error_str = str(e).lower()
+                is_policy = "content_policy" in error_str or "safety" in error_str
+                logger.warning("[%s] attempt %d/%d — %s: %s",
+                              step_name, attempt, max_retries,
+                              "content_policy" if is_policy else "error", e)
+
+            if attempt < max_retries:
+                wait = backoff[min(attempt - 1, len(backoff) - 1)]
+                logger.info("[%s] Retrying in %.1fs...", step_name, wait)
+                await asyncio.sleep(wait)
+
+        raise RuntimeError(
+            f"Step '{step_name}' failed after {max_retries} attempts: {last_error}"
+        ) from last_error
+
+    async def _generate_image_with_retry(
+        self,
+        prompt: str,
+        size: str = "1024x1024",
+        quality: str = "medium",
+        step_name: str = "image",
+        max_retries: int = 3,
+    ) -> bytes | None:
+        """Generate an image with retry. Returns raw bytes or None on failure."""
+        safe_suffix = "\n\nThis is an artistic illustration for a stylized detective board game. No graphic violence."
+        current_prompt = prompt
+
+        for attempt in range(1, max_retries + 1):
+            try:
+                response = await self.client.images.generate(
+                    model="gpt-image-1",
+                    prompt=current_prompt,
+                    n=1,
+                    size=size,
+                    quality=quality,
+                )
+                return base64.b64decode(response.data[0].b64_json)
+            except Exception as e:
+                error_str = str(e).lower()
+                if "content_policy" in error_str or "safety" in error_str:
+                    current_prompt = prompt + safe_suffix
+                    logger.warning("[%s] Content policy, softening prompt (attempt %d/%d)",
+                                  step_name, attempt, max_retries)
+                else:
+                    logger.warning("[%s] Image error (attempt %d/%d): %s",
+                                  step_name, attempt, max_retries, e)
+                if attempt < max_retries:
+                    await asyncio.sleep(3)
+
+        logger.error("[%s] All %d attempts failed", step_name, max_retries)
+        return None
+
+    async def _gen_image_limited(self, coro):
+        """Run coroutine with semaphore to limit parallel image generations."""
+        async with self._image_sem:
+            return await coro
 
     # ─────────────────────────────────────────────
     # Helper: store image (R2 or local)
@@ -115,9 +201,9 @@ class CaseGenerator:
         setting: str | None = None,
         price: float = 0,
     ) -> AsyncGenerator[dict, None]:
-        """Generate case with step-by-step progress updates."""
+        """Generate case with step-by-step progress updates (parallel pipeline)."""
 
-        total_steps = 8
+        total_steps = 5
 
         # Step 1: Plot generation
         yield {"step": 1, "total": total_steps, "step_name": "plot_generation",
@@ -142,83 +228,181 @@ class CaseGenerator:
 
         # Ensure local directories exist (for fallback)
         if not storage.enabled:
-            for subdir in ["locations", "characters", "evidence"]:
+            for subdir in ["locations", "characters", "evidence", "interrogation"]:
                 (IMAGES_BASE_DIR / case_slug / subdir).mkdir(parents=True, exist_ok=True)
 
-        # Step 3: Cover image
-        yield {"step": 3, "total": total_steps, "step_name": "cover_image",
-               "message": "Создание обложки дела...", "status": "in_progress"}
-        logger.info("Step 3/%d: Generating cover image...", total_steps)
-        cover_url = await self._generate_cover_image(case_data["case"], case_slug)
-        case_data["case"]["cover_image"] = cover_url
+        # Step 3: ALL IMAGES IN PARALLEL
+        key_ev_slugs = case_data["case"]["solution"].get("key_evidence", [])
+        key_evidence = [e for e in case_data["evidence"] if e["slug"] in key_ev_slugs]
+        non_victim = [c for c in case_data["characters"] if c.get("role") != "victim"]
+        total_images = (
+            1  # cover
+            + len(case_data["locations"])
+            + len(case_data["characters"])  # avatars
+            + len(non_victim)  # interrogation portraits
+            + len(key_evidence)  # evidence images
+        )
 
-        # Step 4: Location images + POI calibration
-        locations = case_data["locations"]
-        # We store raw image bytes in memory for POI calibration
-        location_image_bytes: dict[str, bytes] = {}
-        for i, loc_data in enumerate(locations):
-            yield {"step": 4, "total": total_steps, "step_name": "location_images",
-                   "message": f"Генерация фото локаций ({i + 1}/{len(locations)})...",
-                   "status": "in_progress"}
-            logger.info("Step 4/%d: Location image %d/%d (%s)...",
-                        total_steps, i + 1, len(locations), loc_data["slug"])
-            img_path, img_bytes = await self._generate_location_image(loc_data, case_slug)
-            loc_data["image"] = img_path
-            if img_bytes:
-                location_image_bytes[loc_data["slug"]] = img_bytes
+        yield {"step": 3, "total": total_steps, "step_name": "images",
+               "message": f"Генерация всех изображений ({total_images} шт, параллельно)...",
+               "status": "in_progress"}
+        logger.info("Step 3/%d: Generating %d images in parallel...", total_steps, total_images)
 
-        # Step 5: POI calibration
-        yield {"step": 5, "total": total_steps, "step_name": "poi_calibration",
+        location_bytes = await self._generate_all_images_parallel(case_data, case_slug)
+
+        # Step 4: POI calibration (parallel across locations)
+        yield {"step": 4, "total": total_steps, "step_name": "poi_calibration",
                "message": "Калибровка точек интереса...", "status": "in_progress"}
-        logger.info("Step 5/%d: Calibrating POI positions...", total_steps)
-        for loc_data in locations:
-            if loc_data.get("points_of_interest") and loc_data.get("image"):
-                raw_bytes = location_image_bytes.get(loc_data["slug"])
-                if raw_bytes:
-                    loc_data["points_of_interest"] = await self._calibrate_pois_from_bytes(
-                        raw_bytes,
-                        loc_data["points_of_interest"],
-                        loc_data["name"],
-                        loc_data["description"],
+        logger.info("Step 4/%d: Calibrating POI positions...", total_steps)
+
+        calibration_tasks = []
+        calibration_locs = []
+        for loc_data in case_data["locations"]:
+            raw = location_bytes.get(loc_data["slug"])
+            if raw and loc_data.get("points_of_interest"):
+                calibration_tasks.append(
+                    self._calibrate_pois_from_bytes(
+                        raw, loc_data["points_of_interest"],
+                        loc_data["name"], loc_data.get("description", ""),
                     )
-        # Free memory
-        location_image_bytes.clear()
+                )
+                calibration_locs.append(loc_data)
 
-        # Step 6: Character avatars
-        characters = case_data["characters"]
-        for i, char_data in enumerate(characters):
-            yield {"step": 6, "total": total_steps, "step_name": "avatars",
-                   "message": f"Генерация аватаров ({i + 1}/{len(characters)})...",
-                   "status": "in_progress"}
-            logger.info("Step 6/%d: Avatar %d/%d (%s)...",
-                        total_steps, i + 1, len(characters), char_data["slug"])
-            avatar_path = await self._generate_avatar(char_data, case_slug)
-            char_data["avatar"] = avatar_path
+        if calibration_tasks:
+            results = await asyncio.gather(*calibration_tasks, return_exceptions=True)
+            for loc_data, result in zip(calibration_locs, results):
+                if isinstance(result, list):
+                    loc_data["points_of_interest"] = result
+                else:
+                    logger.error("POI calibration failed for %s: %s", loc_data["slug"], result)
 
-        # Step 7: Evidence images (key evidence only)
-        key_evidence_slugs = case_data["case"]["solution"].get("key_evidence", [])
-        key_evidence_items = [ev for ev in case_data["evidence"] if ev["slug"] in key_evidence_slugs]
-        for i, ev_data in enumerate(key_evidence_items):
-            yield {"step": 7, "total": total_steps, "step_name": "evidence_images",
-                   "message": f"Генерация фото улик ({i + 1}/{len(key_evidence_items)})...",
-                   "status": "in_progress"}
-            logger.info("Step 7/%d: Evidence image %d/%d (%s)...",
-                        total_steps, i + 1, len(key_evidence_items), ev_data["slug"])
-            ev_img = await self._generate_evidence_image(ev_data, case_slug)
-            ev_data["image"] = ev_img
+        location_bytes.clear()
 
-        # Step 8: Save to database
-        yield {"step": 8, "total": total_steps, "step_name": "database_save",
+        # Step 5: Save to database
+        yield {"step": 5, "total": total_steps, "step_name": "database_save",
                "message": "Сохранение в базу данных...", "status": "in_progress"}
-        logger.info("Step 8/%d: Saving to database...", total_steps)
+        logger.info("Step 5/%d: Saving to database...", total_steps)
         case_id = await self._save_to_database(case_data, db, price=price)
 
-        yield {"step": 8, "total": total_steps, "status": "completed",
+        yield {"step": 5, "total": total_steps, "status": "completed",
                "message": "Дело успешно создано!",
                "case_id": str(case_id), "case_slug": case_slug}
 
     # ─────────────────────────────────────────────
-    # STEP 1: Plot generation
+    # Parallel image generation
+    # ─────────────────────────────────────────────
+
+    async def _generate_all_images_parallel(
+        self,
+        case_data: dict,
+        case_slug: str,
+    ) -> dict[str, bytes]:
+        """
+        Launch ALL image generations in parallel (with semaphore limit).
+        Returns dict {location_slug: raw_bytes} for POI calibration.
+        """
+        tasks = {}
+
+        # Cover
+        tasks["cover"] = self._gen_image_limited(
+            self._generate_cover_image(case_data["case"], case_slug)
+        )
+
+        # Locations
+        for loc in case_data["locations"]:
+            tasks[f"loc_{loc['slug']}"] = self._gen_image_limited(
+                self._generate_location_image(loc, case_slug)
+            )
+
+        # Avatars
+        for char in case_data["characters"]:
+            tasks[f"avatar_{char['slug']}"] = self._gen_image_limited(
+                self._generate_avatar(char, case_slug)
+            )
+
+        # Interrogation portraits (non-victim only)
+        non_victim = [c for c in case_data["characters"] if c.get("role") != "victim"]
+        for char in non_victim:
+            tasks[f"interr_{char['slug']}"] = self._gen_image_limited(
+                self._generate_interrogation_image(char, case_slug)
+            )
+
+        # Evidence images (key evidence only)
+        key_ev_slugs = case_data["case"]["solution"].get("key_evidence", [])
+        key_evidence = [e for e in case_data["evidence"] if e["slug"] in key_ev_slugs]
+        for ev in key_evidence:
+            tasks[f"ev_{ev['slug']}"] = self._gen_image_limited(
+                self._generate_evidence_image(ev, case_slug)
+            )
+
+        # Run all tasks
+        keys = list(tasks.keys())
+        results = await asyncio.gather(*tasks.values(), return_exceptions=True)
+        result_map = dict(zip(keys, results))
+
+        # Distribute results back into case_data
+        location_bytes: dict[str, bytes] = {}
+
+        # Cover
+        cover_result = result_map.get("cover")
+        if isinstance(cover_result, str):
+            case_data["case"]["cover_image"] = cover_result
+        elif isinstance(cover_result, Exception):
+            logger.error("Cover generation failed: %s", cover_result)
+            case_data["case"]["cover_image"] = ""
+        else:
+            case_data["case"]["cover_image"] = cover_result or ""
+
+        # Locations (return tuple: path, bytes)
+        for loc in case_data["locations"]:
+            r = result_map.get(f"loc_{loc['slug']}")
+            if isinstance(r, tuple):
+                loc["image"] = r[0] or ""
+                if r[1]:
+                    location_bytes[loc["slug"]] = r[1]
+            elif isinstance(r, Exception):
+                logger.error("Location image failed for %s: %s", loc["slug"], r)
+                loc["image"] = ""
+            else:
+                loc["image"] = ""
+
+        # Avatars
+        for char in case_data["characters"]:
+            r = result_map.get(f"avatar_{char['slug']}")
+            if isinstance(r, str):
+                char["avatar"] = r
+            elif isinstance(r, Exception):
+                logger.error("Avatar failed for %s: %s", char["slug"], r)
+                char["avatar"] = ""
+            else:
+                char["avatar"] = ""
+
+        # Interrogation portraits
+        for char in non_victim:
+            r = result_map.get(f"interr_{char['slug']}")
+            if isinstance(r, str):
+                char["interrogation_image"] = r
+            elif isinstance(r, Exception):
+                logger.error("Interrogation image failed for %s: %s", char["slug"], r)
+                char["interrogation_image"] = ""
+            else:
+                char["interrogation_image"] = ""
+
+        # Evidence
+        for ev in key_evidence:
+            r = result_map.get(f"ev_{ev['slug']}")
+            if isinstance(r, str):
+                ev["image"] = r
+            elif isinstance(r, Exception):
+                logger.error("Evidence image failed for %s: %s", ev["slug"], r)
+                ev["image"] = ""
+            else:
+                ev["image"] = ""
+
+        return location_bytes
+
+    # ─────────────────────────────────────────────
+    # STEP 1: Plot generation (with retry)
     # ─────────────────────────────────────────────
 
     async def _generate_plot(
@@ -409,22 +593,25 @@ Slugs и id — на латинице (snake_case).
 
 Ответь ТОЛЬКО валидным JSON. Без markdown, без комментариев."""
 
-        response = await self.client.chat.completions.create(
-            model="gpt-4o",
-            messages=[
-                {"role": "system", "content": system_prompt},
-                {"role": "user", "content": "Сгенерируй детективное дело."},
-            ],
-            temperature=0.9,
-            max_tokens=8000,
-        )
+        async def _attempt():
+            response = await self.client.chat.completions.create(
+                model="gpt-4o",
+                messages=[
+                    {"role": "system", "content": system_prompt},
+                    {"role": "user", "content": "Сгенерируй детективное дело."},
+                ],
+                temperature=0.9,
+                max_tokens=8000,
+            )
+            raw = (response.choices[0].message.content or "").strip()
+            if not raw:
+                raise json.JSONDecodeError("Empty response from OpenAI", "", 0)
+            if raw.startswith("```"):
+                raw = re.sub(r'^```(?:json)?\s*', '', raw)
+                raw = re.sub(r'\s*```$', '', raw)
+            return json.loads(raw)
 
-        raw = response.choices[0].message.content.strip()
-        if raw.startswith("```"):
-            raw = re.sub(r'^```(?:json)?\s*', '', raw)
-            raw = re.sub(r'\s*```$', '', raw)
-
-        return json.loads(raw)
+        return await self._call_with_retry(_attempt, "plot_generation")
 
     # ─────────────────────────────────────────────
     # STEP 2: Validation
@@ -523,22 +710,25 @@ Slugs и id — на латинице (snake_case).
 Исправь ВСЕ ошибки и верни исправленный JSON.
 ТОЛЬКО валидный JSON, без markdown, без комментариев."""
 
-        response = await self.client.chat.completions.create(
-            model="gpt-4o",
-            messages=[{"role": "user", "content": fix_prompt}],
-            temperature=0.3,
-            max_tokens=8000,
-        )
+        async def _attempt():
+            response = await self.client.chat.completions.create(
+                model="gpt-4o",
+                messages=[{"role": "user", "content": fix_prompt}],
+                temperature=0.3,
+                max_tokens=8000,
+            )
+            raw = (response.choices[0].message.content or "").strip()
+            if not raw:
+                raise json.JSONDecodeError("Empty response from OpenAI", "", 0)
+            if raw.startswith("```"):
+                raw = re.sub(r'^```(?:json)?\s*', '', raw)
+                raw = re.sub(r'\s*```$', '', raw)
+            return json.loads(raw)
 
-        raw = response.choices[0].message.content.strip()
-        if raw.startswith("```"):
-            raw = re.sub(r'^```(?:json)?\s*', '', raw)
-            raw = re.sub(r'\s*```$', '', raw)
-
-        return json.loads(raw)
+        return await self._call_with_retry(_attempt, "fix_plot")
 
     # ─────────────────────────────────────────────
-    # STEP 3: Cover image
+    # Image generation methods (with retry)
     # ─────────────────────────────────────────────
 
     async def _generate_cover_image(self, case_info: dict, case_slug: str) -> str:
@@ -552,33 +742,19 @@ Slugs и id — на латинице (snake_case).
 Формат: горизонтальный, соотношение 16:9.
 БЕЗ текста и надписей на изображении."""
 
-        try:
-            response = await self.client.images.generate(
-                model="gpt-image-1",
-                prompt=prompt,
-                n=1,
-                size="1536x1024",
-                quality="high",
-            )
-
-            image_b64 = response.data[0].b64_json
-            image_bytes = base64.b64decode(image_b64)
-
-            key = f"cases/{case_slug}/cover.webp"
-            local_rel = f"generated/{case_slug}/cover.png"
-
-            return await self._store_image(
-                image_bytes, key, local_rel,
-                max_width=1200, max_height=675, quality=85,
-            )
-
-        except Exception as e:
-            logger.error("Failed to generate cover image for %s: %s", case_slug, e)
+        image_bytes = await self._generate_image_with_retry(
+            prompt, "1536x1024", "high", f"cover_{case_slug}"
+        )
+        if not image_bytes:
             return ""
 
-    # ─────────────────────────────────────────────
-    # STEP 4: Location images
-    # ─────────────────────────────────────────────
+        key = f"cases/{case_slug}/cover.webp"
+        local_rel = f"generated/{case_slug}/cover.png"
+
+        return await self._store_image(
+            image_bytes, key, local_rel,
+            max_width=1200, max_height=675, quality=85,
+        )
 
     async def _generate_location_image(self, loc_data: dict, case_slug: str) -> tuple[str, bytes | None]:
         """Generate location image. Returns (stored_path, raw_bytes_for_calibration)."""
@@ -604,27 +780,17 @@ Slugs и id — на латинице (snake_case).
 Формат: широкий кадр 16:9.
 БЕЗ текста, надписей, водяных знаков, людей."""
 
-        try:
-            response = await self.client.images.generate(
-                model="gpt-image-1",
-                prompt=prompt,
-                n=1,
-                size="1536x1024",
-                quality="high",
-            )
-
-            image_b64 = response.data[0].b64_json
-            image_bytes = base64.b64decode(image_b64)
-
-            key = f"cases/{case_slug}/locations/{loc_data['slug']}.webp"
-            local_rel = f"generated/{case_slug}/locations/{loc_data['slug']}.png"
-
-            stored_path = await self._store_image(image_bytes, key, local_rel)
-            return stored_path, image_bytes
-
-        except Exception as e:
-            logger.error("Failed to generate image for %s: %s", loc_data["slug"], e)
+        image_bytes = await self._generate_image_with_retry(
+            prompt, "1536x1024", "high", f"location_{loc_data['slug']}"
+        )
+        if not image_bytes:
             return "", None
+
+        key = f"cases/{case_slug}/locations/{loc_data['slug']}.webp"
+        local_rel = f"generated/{case_slug}/locations/{loc_data['slug']}.png"
+
+        stored_path = await self._store_image(image_bytes, key, local_rel)
+        return stored_path, image_bytes
 
     def _position_hint(self, x: int, y: int) -> str:
         h = "слева" if x < 35 else "справа" if x > 65 else "по центру"
@@ -632,7 +798,7 @@ Slugs и id — на латинице (snake_case).
         return f"{h}, {v}"
 
     # ─────────────────────────────────────────────
-    # STEP 5: POI calibration (from bytes)
+    # POI calibration (with retry)
     # ─────────────────────────────────────────────
 
     async def _calibrate_pois_from_bytes(
@@ -664,33 +830,43 @@ Slugs и id — на латинице (snake_case).
 Ответь ТОЛЬКО JSON-массивом:
 [{{"id": "poi_id", "x_percent": 25, "y_percent": 40, "width_percent": 18, "height_percent": 15}}, ...]"""
 
-        response = await self.client.chat.completions.create(
-            model="gpt-4o",
-            messages=[
-                {
-                    "role": "user",
-                    "content": [
-                        {
-                            "type": "image_url",
-                            "image_url": {
-                                "url": f"data:image/png;base64,{image_b64}",
-                                "detail": "high",
+        async def _attempt():
+            response = await self.client.chat.completions.create(
+                model="gpt-4o",
+                messages=[
+                    {
+                        "role": "user",
+                        "content": [
+                            {
+                                "type": "image_url",
+                                "image_url": {
+                                    "url": f"data:image/png;base64,{image_b64}",
+                                    "detail": "high",
+                                },
                             },
-                        },
-                        {"type": "text", "text": calibration_prompt},
-                    ],
-                }
-            ],
-            temperature=0.1,
-            max_tokens=2000,
-        )
+                            {"type": "text", "text": calibration_prompt},
+                        ],
+                    }
+                ],
+                temperature=0.1,
+                max_tokens=2000,
+            )
+            raw = (response.choices[0].message.content or "").strip()
+            if not raw:
+                raise json.JSONDecodeError("Empty response from OpenAI", "", 0)
+            if raw.startswith("```"):
+                raw = re.sub(r'^```(?:json)?\s*', '', raw)
+                raw = re.sub(r'\s*```$', '', raw)
+            return json.loads(raw)
 
-        raw = response.choices[0].message.content.strip()
-        if raw.startswith("```"):
-            raw = re.sub(r'^```(?:json)?\s*', '', raw)
-            raw = re.sub(r'\s*```$', '', raw)
+        try:
+            calibrated = await self._call_with_retry(
+                _attempt, f"poi_calibration_{location_name}"
+            )
+        except Exception as e:
+            logger.error("POI calibration failed, keeping original positions: %s", e)
+            return pois
 
-        calibrated = json.loads(raw)
         cal_map = {p["id"]: p for p in calibrated}
         for poi in pois:
             if poi["id"] in cal_map:
@@ -703,7 +879,7 @@ Slugs и id — на латинице (snake_case).
         return pois
 
     # ─────────────────────────────────────────────
-    # STEP 6: Character avatars
+    # Character avatars (with retry)
     # ─────────────────────────────────────────────
 
     async def _generate_avatar(self, char_data: dict, case_slug: str) -> str:
@@ -718,32 +894,67 @@ Slugs и id — на латинице (snake_case).
 Выражение лица: задумчивое или настороженное.
 БЕЗ текста, надписей, водяных знаков."""
 
-        try:
-            response = await self.client.images.generate(
-                model="gpt-image-1",
-                prompt=prompt,
-                n=1,
-                size="1024x1024",
-                quality="medium",
-            )
-
-            image_b64 = response.data[0].b64_json
-            image_bytes = base64.b64decode(image_b64)
-
-            key = f"cases/{case_slug}/characters/{char_data['slug']}.webp"
-            local_rel = f"generated/{case_slug}/characters/{char_data['slug']}.png"
-
-            return await self._store_image(
-                image_bytes, key, local_rel,
-                max_width=512, max_height=512, quality=80,
-            )
-
-        except Exception as e:
-            logger.error("Failed to generate avatar for %s: %s", char_data["slug"], e)
+        image_bytes = await self._generate_image_with_retry(
+            prompt, "1024x1024", "medium", f"avatar_{char_data['slug']}"
+        )
+        if not image_bytes:
             return ""
 
+        key = f"cases/{case_slug}/characters/{char_data['slug']}.webp"
+        local_rel = f"generated/{case_slug}/characters/{char_data['slug']}.png"
+
+        return await self._store_image(
+            image_bytes, key, local_rel,
+            max_width=512, max_height=512, quality=80,
+        )
+
     # ─────────────────────────────────────────────
-    # STEP 7: Evidence images
+    # Interrogation scene images (with retry)
+    # ─────────────────────────────────────────────
+
+    async def _generate_interrogation_image(self, char_data: dict, case_slug: str) -> str:
+        """
+        Generate an interrogation scene: character sits across a table
+        in a dark room, POV from the detective. 16:9 format.
+        """
+        prompt = f"""A cinematic interrogation room scene for a detective game.
+
+POV: the viewer (detective) sits across a table from the suspect.
+The suspect: {char_data['name']}, age {char_data.get('age', 35)},
+occupation: {char_data.get('occupation', 'unknown')}.
+Personality: {char_data.get('personality', '')}.
+
+The person sits facing the camera across a wooden table.
+Setting: dark interrogation room, single overhead industrial lamp
+casting a cone of warm light onto the table and suspect's face.
+On the table: a glass of water, scattered papers, an ashtray with a cigarette.
+Background: dimly lit concrete walls, a corkboard with pinned notes barely visible.
+Mood: tense, noir, cinematic.
+
+Camera: front-facing, slightly above eye level, medium shot (table to head).
+The suspect's expression: guarded, slightly tense, watching the detective carefully.
+
+Style: photorealistic, cinematic, dramatic lighting like a thriller film.
+Horizontal format 16:9. High contrast, deep shadows.
+NO text, NO labels, NO UI elements, NO watermarks."""
+
+        image_bytes = await self._generate_image_with_retry(
+            prompt, "1536x1024", "high",
+            f"interrogation_{char_data['slug']}"
+        )
+        if not image_bytes:
+            return ""
+
+        key = f"cases/{case_slug}/interrogation/{char_data['slug']}.webp"
+        local_rel = f"generated/{case_slug}/interrogation/{char_data['slug']}.png"
+
+        return await self._store_image(
+            image_bytes, key, local_rel,
+            max_width=1400, max_height=788, quality=85,
+        )
+
+    # ─────────────────────────────────────────────
+    # Evidence images (with retry)
     # ─────────────────────────────────────────────
 
     async def _generate_evidence_image(self, ev_data: dict, case_slug: str) -> str:
@@ -758,32 +969,22 @@ Slugs и id — на латинице (snake_case).
 Реалистичный стиль. Квадратный формат.
 БЕЗ текста, надписей, водяных знаков."""
 
-        try:
-            response = await self.client.images.generate(
-                model="gpt-image-1",
-                prompt=prompt,
-                n=1,
-                size="1024x1024",
-                quality="medium",
-            )
-
-            image_b64 = response.data[0].b64_json
-            image_bytes = base64.b64decode(image_b64)
-
-            key = f"cases/{case_slug}/evidence/{ev_data['slug']}.webp"
-            local_rel = f"generated/{case_slug}/evidence/{ev_data['slug']}.png"
-
-            return await self._store_image(
-                image_bytes, key, local_rel,
-                max_width=800, max_height=800, quality=80,
-            )
-
-        except Exception as e:
-            logger.error("Failed to generate evidence image for %s: %s", ev_data["slug"], e)
+        image_bytes = await self._generate_image_with_retry(
+            prompt, "1024x1024", "medium", f"evidence_{ev_data['slug']}"
+        )
+        if not image_bytes:
             return ""
 
+        key = f"cases/{case_slug}/evidence/{ev_data['slug']}.webp"
+        local_rel = f"generated/{case_slug}/evidence/{ev_data['slug']}.png"
+
+        return await self._store_image(
+            image_bytes, key, local_rel,
+            max_width=800, max_height=800, quality=80,
+        )
+
     # ─────────────────────────────────────────────
-    # STEP 8: Save to DB
+    # Save to DB
     # ─────────────────────────────────────────────
 
     async def _save_to_database(self, case_data: dict, db: AsyncSession, price: float = 0) -> UUID:
@@ -837,6 +1038,7 @@ Slugs и id — на латинице (snake_case).
                 emotional_reactions=char.get("emotional_reactions", {}),
                 ai_system_prompt=char.get("ai_system_prompt", ""),
                 avatar=char.get("avatar", ""),
+                interrogation_image=char.get("interrogation_image", ""),
                 sort_order=char.get("sort_order", 0),
             ))
 
@@ -889,6 +1091,10 @@ Slugs и id — на латинице (snake_case).
     async def regenerate_evidence_image(self, case_slug: str, ev_data: dict) -> str:
         """Regenerate evidence image. Returns new image path/URL."""
         return await self._generate_evidence_image(ev_data, case_slug)
+
+    async def regenerate_interrogation_image(self, case_slug: str, char_data: dict) -> str:
+        """Regenerate interrogation scene image. Returns new image path/URL."""
+        return await self._generate_interrogation_image(char_data, case_slug)
 
     async def recalibrate_pois(self, image_bytes: bytes, pois: list[dict], location_name: str, location_description: str) -> list[dict]:
         """Recalibrate POI positions for a location image."""

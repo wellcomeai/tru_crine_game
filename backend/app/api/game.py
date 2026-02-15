@@ -237,6 +237,7 @@ async def get_characters(
                 age=char.age,
                 occupation=char.occupation,
                 avatar=char.avatar,
+                interrogation_image=char.interrogation_image or "",
                 is_interrogated=is_interrogated,
                 is_locked=is_locked,
                 current_emotion="calm",

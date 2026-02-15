@@ -60,6 +60,7 @@ export interface Character {
   age: number | null;
   occupation: string | null;
   avatar: string | null;
+  interrogation_image?: string;
   is_interrogated: boolean;
   is_locked: boolean;
   current_emotion: string;

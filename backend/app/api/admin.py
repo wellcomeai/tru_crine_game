@@ -233,6 +233,7 @@ async def admin_case_preview(
                 "age": ch.age,
                 "occupation": ch.occupation,
                 "avatar": ch.avatar,
+                "interrogation_image": ch.interrogation_image or "",
                 "personality": ch.personality,
                 "backstory": ch.backstory,
                 "is_guilty": ch.is_guilty,
@@ -276,7 +277,7 @@ async def admin_case_preview(
 # ─────────────────────────────────────────────
 
 class RegenerateImageRequest(BaseModel):
-    entity_type: str    # "cover" | "location" | "character" | "evidence"
+    entity_type: str    # "cover" | "location" | "character" | "evidence" | "interrogation"
     entity_slug: str    # slug of the entity (for cover: "cover" or empty)
     custom_prompt: str | None = None
 
@@ -391,6 +392,30 @@ async def regenerate_image(
         new_url = await case_generator.regenerate_evidence_image(case_slug, ev_data)
         new_url = _cache_bust(new_url)
         evidence.image = new_url
+        await db.commit()
+        return {"status": "ok", "new_image_url": new_url}
+
+    elif req.entity_type == "interrogation":
+        result = await db.execute(
+            select(Character).where(
+                Character.case_id == case_id,
+                Character.slug == req.entity_slug,
+            )
+        )
+        character = result.scalar_one_or_none()
+        if not character:
+            raise HTTPException(404, f"Character '{req.entity_slug}' not found")
+
+        char_data = {
+            "slug": character.slug,
+            "name": character.name,
+            "age": character.age,
+            "occupation": character.occupation,
+            "personality": character.personality,
+        }
+        new_url = await case_generator.regenerate_interrogation_image(case_slug, char_data)
+        new_url = _cache_bust(new_url)
+        character.interrogation_image = new_url
         await db.commit()
         return {"status": "ok", "new_image_url": new_url}
 

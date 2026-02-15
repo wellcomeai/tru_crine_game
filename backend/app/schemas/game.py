@@ -34,6 +34,7 @@ class CharacterSchema(BaseModel):
     age: Optional[int] = None
     occupation: Optional[str] = None
     avatar: Optional[str] = None
+    interrogation_image: str = ""
     is_interrogated: bool = False
     is_locked: bool = False
     current_emotion: str = "calm"

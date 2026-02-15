@@ -15,6 +15,7 @@ class Character(Base):
     age = Column(Integer)
     occupation = Column(String(255))
     avatar = Column(String(500))
+    interrogation_image = Column(String(500), default="")
     personality = Column(Text)
     backstory = Column(Text)
     secrets = Column(JSONB, default=list)

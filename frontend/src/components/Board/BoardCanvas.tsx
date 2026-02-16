@@ -15,7 +15,7 @@ import ConnectionLine from './ConnectionLine';
 import { useGameStore } from '../../stores/gameStore';
 import { toast } from 'sonner';
 
-const CORK_BOARD_URL = 'https://pub-b1e3de631e544c69b0ad6587f740e140.r2.dev/photo_2026-02-16_11-19-32%20(1).jpg';
+const CORK_BOARD_URL = 'https://pub-b1e3de631e544c69b0ad6587f740e140.r2.dev/photo_2026-02-16_11-19-32%20%281%29.jpg';
 
 const nodeTypes = { evidence: EvidenceNode };
 const edgeTypes = { connection: ConnectionLine };

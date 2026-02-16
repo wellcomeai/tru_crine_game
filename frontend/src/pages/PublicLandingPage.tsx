@@ -407,7 +407,7 @@ export default function PublicLandingPage() {
         {/* Parallax background image */}
         <motion.div className="absolute inset-0" style={{ scale: heroScale, y: heroY }}>
           <img
-            src={`${R2}/IMG_4874.PNG`}
+            src="https://pub-b1e3de631e544c69b0ad6587f740e140.r2.dev/hero.jpg"
             alt=""
             className="absolute inset-0 w-full h-full object-cover"
             style={{ filter: 'contrast(1.1) saturate(0.75) brightness(0.5)', objectPosition: '70% center' }}

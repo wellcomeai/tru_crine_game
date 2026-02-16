@@ -10,21 +10,35 @@ export default function BoardPage() {
   useGame(sessionId!);
 
   return (
-    <GameLayout>
-      <div className="flex items-center gap-3 mb-4">
+    <GameLayout noPadding>
+      <div className="relative h-[calc(100vh-3.5rem)]">
+        {/* Back button — overlay */}
         <button
           onClick={() => navigate(`/game/${sessionId}`)}
-          className="text-gray-400 hover:text-gray-200 transition-colors"
+          className="absolute top-3 left-3 z-40
+                     flex items-center gap-1.5
+                     text-gray-300 hover:text-white transition-colors
+                     bg-[rgba(10,10,15,0.7)] backdrop-blur-sm
+                     rounded-lg px-3 py-1.5
+                     border border-noir-600/30
+                     hover:border-gold-dim/50
+                     hover:bg-[rgba(10,10,15,0.85)]"
         >
-          <ArrowLeft size={20} />
+          <ArrowLeft size={16} />
+          <span className="text-xs hidden sm:inline">Назад</span>
         </button>
-        <h2 className="font-serif text-xl text-gold">Доска расследования</h2>
-        <p className="text-xs text-gray-500 ml-2">
-          Перетаскивайте связи между уликами
-        </p>
-      </div>
 
-      <div className="h-[calc(100vh-12rem)] bg-noir-800 rounded-xl border border-noir-600 overflow-hidden">
+        {/* Title — overlay */}
+        <div className="absolute top-3 left-1/2 -translate-x-1/2 z-40
+                        bg-[rgba(10,10,15,0.7)] backdrop-blur-sm
+                        rounded-lg px-4 py-1.5
+                        border border-noir-600/30">
+          <h2 className="font-serif text-sm sm:text-base text-gold whitespace-nowrap">
+            Доска расследования
+          </h2>
+        </div>
+
+        {/* Board canvas — edge to edge */}
         <BoardCanvas />
       </div>
     </GameLayout>

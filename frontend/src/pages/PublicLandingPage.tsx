@@ -1,19 +1,46 @@
-import { useEffect, useRef, useState, useCallback } from 'react';
+import { useEffect, useRef, useState, useCallback, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { motion, useInView, AnimatePresence } from 'framer-motion';
+import { motion, useInView, AnimatePresence, useScroll, useTransform, useSpring, useMotionValue } from 'framer-motion';
 import { useAuthStore } from '../stores/authStore';
-import { ChevronDown, Search, MessageSquare, Network, Scale } from 'lucide-react';
+import { ChevronDown, Search, MessageSquare, Network, Scale, Fingerprint } from 'lucide-react';
 
 /* ─────────────────────── PALETTE ─────────────────────── */
 const GOLD = '#d4a546';
 const GOLD_DIM = '#a07830';
 const GOLD_BRIGHT = '#f0d060';
+const DARK = '#07070a';
 const R2 = 'https://pub-b1e3de631e544c69b0ad6587f740e140.r2.dev';
 
 const LOCATIONS = [
   `${R2}/location1.png`, `${R2}/location2.png`, `${R2}/location3.png`,
   `${R2}/location5.png`, `${R2}/location7.png`, `${R2}/location8.png`,
 ];
+
+/* ═══════════════════ MAGNETIC ELEMENT ═══════════════════ */
+function Magnetic({ children, strength = 0.3, className = '' }: { children: React.ReactNode; strength?: number; className?: string }) {
+  const ref = useRef<HTMLDivElement>(null);
+  const x = useMotionValue(0);
+  const y = useMotionValue(0);
+  const sx = useSpring(x, { stiffness: 250, damping: 20 });
+  const sy = useSpring(y, { stiffness: 250, damping: 20 });
+
+  const onMove = useCallback((e: React.MouseEvent) => {
+    if (!ref.current) return;
+    const rect = ref.current.getBoundingClientRect();
+    const cx = rect.left + rect.width / 2;
+    const cy = rect.top + rect.height / 2;
+    x.set((e.clientX - cx) * strength);
+    y.set((e.clientY - cy) * strength);
+  }, [x, y, strength]);
+
+  const onLeave = useCallback(() => { x.set(0); y.set(0); }, [x, y]);
+
+  return (
+    <motion.div ref={ref} style={{ x: sx, y: sy }} onMouseMove={onMove} onMouseLeave={onLeave} className={className}>
+      {children}
+    </motion.div>
+  );
+}
 
 /* ═══════════════════ TYPEWRITER ═══════════════════ */
 function useTypewriter(text: string, speed = 50, startDelay = 0, enabled = true) {
@@ -53,19 +80,56 @@ function AnimatedCounter({ target, suffix = '', duration = 2000 }: { target: num
   return <span ref={ref}>{value.toLocaleString()}{suffix}</span>;
 }
 
-/* ═══════════════════ PARTICLES (CSS-only for performance) ═══════════════════ */
-function FloatingParticles() {
-  const p = useRef(
-    Array.from({ length: 12 }, (_, i) => ({
+/* ═══════════════════ FILM GRAIN ═══════════════════ */
+function FilmGrain() {
+  return (
+    <div className="fixed inset-0 z-[9999] pointer-events-none mix-blend-overlay opacity-[0.035]">
+      <div className="absolute inset-0 film-grain" />
+    </div>
+  );
+}
+
+/* ═══════════════════ SMOKE PARTICLES ═══════════════════ */
+function SmokeParticles() {
+  const particles = useMemo(() =>
+    Array.from({ length: 18 }, (_, i) => ({
       id: i, x: Math.random() * 100, y: Math.random() * 100,
-      size: Math.random() * 2 + 0.5, dur: Math.random() * 25 + 18,
-      delay: Math.random() * 12, opacity: Math.random() * 0.18 + 0.04,
+      size: Math.random() * 120 + 40,
+      dur: Math.random() * 30 + 20,
+      delay: Math.random() * 15,
+      opacity: Math.random() * 0.03 + 0.01,
     }))
-  ).current;
+  , []);
+
   return (
     <div className="absolute inset-0 overflow-hidden pointer-events-none">
-      {p.map((d) => (
-        <div key={d.id} className="absolute rounded-full particle-float"
+      {particles.map((p) => (
+        <div key={p.id} className="absolute rounded-full smoke-drift"
+          style={{
+            left: `${p.x}%`, top: `${p.y}%`, width: p.size, height: p.size,
+            background: `radial-gradient(circle, rgba(212,165,70,${p.opacity}) 0%, transparent 70%)`,
+            animationDuration: `${p.dur}s`, animationDelay: `${p.delay}s`,
+            filter: 'blur(30px)',
+          }} />
+      ))}
+    </div>
+  );
+}
+
+/* ═══════════════════ FLOATING DUST ═══════════════════ */
+function FloatingDust() {
+  const dust = useMemo(() =>
+    Array.from({ length: 30 }, (_, i) => ({
+      id: i, x: Math.random() * 100, y: Math.random() * 100,
+      size: Math.random() * 2 + 0.5, dur: Math.random() * 25 + 18,
+      delay: Math.random() * 12, opacity: Math.random() * 0.2 + 0.05,
+    }))
+  , []);
+
+  return (
+    <div className="absolute inset-0 overflow-hidden pointer-events-none">
+      {dust.map((d) => (
+        <div key={d.id} className="absolute rounded-full dust-float"
           style={{
             left: `${d.x}%`, top: `${d.y}%`, width: d.size, height: d.size,
             backgroundColor: GOLD, opacity: d.opacity,
@@ -77,14 +141,48 @@ function FloatingParticles() {
 }
 
 /* ═══════════════════ SCROLL REVEAL ═══════════════════ */
-function SR({ children, className = '', delay = 0 }: { children: React.ReactNode; className?: string; delay?: number }) {
+function SR({ children, className = '', delay = 0, direction = 'up' }: {
+  children: React.ReactNode; className?: string; delay?: number;
+  direction?: 'up' | 'left' | 'right' | 'scale';
+}) {
   const ref = useRef(null);
-  const inView = useInView(ref, { once: true, margin: '-60px' });
+  const inView = useInView(ref, { once: true, margin: '-80px' });
+
+  const variants: Record<string, { hidden: Record<string, number>; visible: Record<string, number> }> = {
+    up: { hidden: { opacity: 0, y: 50 }, visible: { opacity: 1, y: 0 } },
+    left: { hidden: { opacity: 0, x: -60 }, visible: { opacity: 1, x: 0 } },
+    right: { hidden: { opacity: 0, x: 60 }, visible: { opacity: 1, x: 0 } },
+    scale: { hidden: { opacity: 0, scale: 0.92 }, visible: { opacity: 1, scale: 1 } },
+  };
+
   return (
-    <motion.div ref={ref} initial={{ opacity: 0, y: 35 }}
-      animate={inView ? { opacity: 1, y: 0 } : {}}
-      transition={{ duration: 0.75, delay, ease: [0.22, 1, 0.36, 1] }}
+    <motion.div ref={ref}
+      initial={variants[direction].hidden}
+      animate={inView ? variants[direction].visible : variants[direction].hidden}
+      transition={{ duration: 0.9, delay, ease: [0.22, 1, 0.36, 1] }}
       className={className}>{children}</motion.div>
+  );
+}
+
+/* ═══════════════════ EVIDENCE STAMP ═══════════════════ */
+function EvidenceStamp({ label, delay = 0 }: { label: string; delay?: number }) {
+  const ref = useRef(null);
+  const inView = useInView(ref, { once: true, margin: '-40px' });
+
+  return (
+    <motion.div ref={ref}
+      initial={{ opacity: 0, scale: 2.5, rotate: -15 }}
+      animate={inView ? { opacity: 1, scale: 1, rotate: -4 } : {}}
+      transition={{ duration: 0.3, delay: delay + 0.2, ease: [0.22, 1, 0.36, 1] }}
+      className="absolute -top-3 -right-3 z-20 px-2 py-0.5 text-[8px] font-bold uppercase tracking-[0.2em] border"
+      style={{
+        color: '#cc3700', borderColor: '#cc370040',
+        backgroundColor: 'rgba(204, 55, 0, 0.08)',
+        fontFamily: "'JetBrains Mono', monospace",
+        textShadow: '0 0 10px rgba(204,55,0,0.3)',
+      }}>
+      {label}
+    </motion.div>
   );
 }
 
@@ -122,7 +220,6 @@ function EmotionCycler() {
 /* ═══════════════════ FAQ ═══════════════════ */
 const FAQ = [
   { q: 'Это бесплатно?', a: 'Первое дело — полностью бесплатно. Вы можете пройти его целиком, включая все допросы, осмотр локаций и финальное обвинение. Дополнительные дела доступны после покупки.' },
-
   { q: 'Сколько длится одно дело?', a: 'В среднем от 40 минут до 1,5 часов — зависит от того, насколько тщательно вы изучаете улики и допрашиваете подозреваемых.' },
   { q: 'Как работает AI в игре?', a: 'Каждый подозреваемый управляется продвинутым AI с уникальной личностью, секретами и алиби. Он реагирует на ваши вопросы и предъявленные улики, может нервничать, злиться и быть пойман на лжи.' },
   { q: 'Можно ли переиграть дело?', a: 'Да. AI генерирует уникальные ответы каждый раз, так что диалоги не будут повторяться.' },
@@ -152,7 +249,7 @@ function FaqItem({ item, isOpen, onToggle }: { item: typeof FAQ[0]; isOpen: bool
 }
 
 /* ═══════════════════ MONITOR FRAME ═══════════════════ */
-function MonitorFrame({ src, alt }: { src: string; alt: string }) {
+function MonitorFrame({ src, alt, stamp }: { src: string; alt: string; stamp?: string }) {
   return (
     <motion.div
       initial={{ opacity: 0, y: 30 }}
@@ -164,6 +261,7 @@ function MonitorFrame({ src, alt }: { src: string; alt: string }) {
         background: 'linear-gradient(135deg, rgba(212,165,70,0.08) 0%, rgba(15,15,20,0.9) 40%, rgba(15,15,20,0.95) 100%)',
         padding: '1px',
       }}>
+      {stamp && <EvidenceStamp label={stamp} />}
       <div className="rounded-2xl overflow-hidden" style={{ backgroundColor: '#0c0c10' }}>
         <div className="flex items-center gap-2 px-5 py-3" style={{ backgroundColor: 'rgba(255,255,255,0.02)' }}>
           <div className="flex gap-1.5">
@@ -176,9 +274,9 @@ function MonitorFrame({ src, alt }: { src: string; alt: string }) {
           </div>
         </div>
         <div className="relative overflow-hidden">
-          <img src={src} alt={alt} loading="lazy" className="w-full block transition-transform duration-700 group-hover:scale-[1.015]" />
+          <img src={src} alt={alt} loading="lazy" className="w-full block transition-transform duration-700 group-hover:scale-[1.02]" />
           <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-700 pointer-events-none"
-            style={{ boxShadow: `inset 0 0 100px ${GOLD}06` }} />
+            style={{ boxShadow: `inset 0 0 100px ${GOLD}08` }} />
         </div>
       </div>
     </motion.div>
@@ -188,27 +286,31 @@ function MonitorFrame({ src, alt }: { src: string; alt: string }) {
 /* ═══════════════════ BUTTONS ═══════════════════ */
 function GoldButton({ children, onClick, size = 'lg' }: { children: React.ReactNode; onClick: () => void; size?: 'lg' | 'sm' }) {
   return (
-    <motion.button onClick={onClick}
-      whileHover={{ scale: 1.03, boxShadow: `0 15px 40px rgba(212,165,70,0.2)` }}
-      whileTap={{ scale: 0.97 }}
-      className={`relative overflow-hidden font-bold uppercase tracking-wider group
-        ${size === 'lg' ? 'px-10 py-4 text-sm' : 'px-6 py-3 text-xs'}`}
-      style={{ backgroundColor: GOLD, color: '#080808', border: `1px solid ${GOLD}` }}>
-      <span className="absolute top-0 left-[-120%] w-[60%] h-full transition-all duration-700 ease-in-out group-hover:left-[150%] pointer-events-none"
-        style={{ background: 'linear-gradient(to right, transparent, rgba(255,255,255,0.7), transparent)', transform: 'skewX(-25deg)' }} />
-      <span className="relative">{children}</span>
-    </motion.button>
+    <Magnetic strength={0.15}>
+      <motion.button onClick={onClick}
+        whileHover={{ scale: 1.03, boxShadow: '0 15px 50px rgba(212,165,70,0.25), 0 0 80px rgba(212,165,70,0.08)' }}
+        whileTap={{ scale: 0.97 }}
+        className={`relative overflow-hidden font-bold uppercase tracking-wider group
+          ${size === 'lg' ? 'px-10 py-4 text-sm' : 'px-6 py-3 text-xs'}`}
+        style={{ backgroundColor: GOLD, color: '#080808', border: `1px solid ${GOLD}`, cursor: 'none' }}>
+        <span className="absolute top-0 left-[-120%] w-[60%] h-full transition-all duration-700 ease-in-out group-hover:left-[150%] pointer-events-none"
+          style={{ background: 'linear-gradient(to right, transparent, rgba(255,255,255,0.7), transparent)', transform: 'skewX(-25deg)' }} />
+        <span className="relative">{children}</span>
+      </motion.button>
+    </Magnetic>
   );
 }
 
 function GhostButton({ children, onClick }: { children: React.ReactNode; onClick: () => void }) {
   return (
-    <motion.button onClick={onClick}
-      whileHover={{ scale: 1.03 }} whileTap={{ scale: 0.97 }}
-      className="px-8 py-4 text-sm font-bold uppercase tracking-wider border transition-all duration-300 hover:border-[#d4a546] hover:text-[#d4a546] hover:bg-[rgba(212,165,70,0.04)]"
-      style={{ borderColor: 'rgba(255,255,255,0.15)', color: '#c8c8d0' }}>
-      {children}
-    </motion.button>
+    <Magnetic strength={0.15}>
+      <motion.button onClick={onClick}
+        whileHover={{ scale: 1.03 }} whileTap={{ scale: 0.97 }}
+        className="px-8 py-4 text-sm font-bold uppercase tracking-wider border transition-all duration-300 hover:border-[#d4a546] hover:text-[#d4a546] hover:bg-[rgba(212,165,70,0.04)]"
+        style={{ borderColor: 'rgba(255,255,255,0.15)', color: '#c8c8d0', cursor: 'none' }}>
+        {children}
+      </motion.button>
+    </Magnetic>
   );
 }
 
@@ -218,18 +320,131 @@ function LocationsMarquee() {
   return (
     <div className="w-full overflow-hidden relative">
       <div className="absolute left-0 top-0 bottom-0 w-20 sm:w-32 z-10 pointer-events-none"
-        style={{ background: 'linear-gradient(to right, #07070a, transparent)' }} />
+        style={{ background: `linear-gradient(to right, ${DARK}, transparent)` }} />
       <div className="absolute right-0 top-0 bottom-0 w-20 sm:w-32 z-10 pointer-events-none"
-        style={{ background: 'linear-gradient(to left, #07070a, transparent)' }} />
+        style={{ background: `linear-gradient(to left, ${DARK}, transparent)` }} />
       <div className="marquee-track flex gap-4">
         {all.map((src, i) => (
-          <div key={i} className="flex-shrink-0 w-[440px] sm:w-[520px] aspect-video rounded-xl overflow-hidden border transition-all duration-500 hover:border-[rgba(212,165,70,0.3)]"
+          <div key={i} className="flex-shrink-0 w-[440px] sm:w-[520px] aspect-video rounded-xl overflow-hidden border transition-all duration-500 hover:border-[rgba(212,165,70,0.3)] group"
             style={{ borderColor: 'rgba(255,255,255,0.06)' }}>
-            <img src={src} alt="" loading="lazy" className="w-full h-full object-cover"
+            <img src={src} alt="" loading="lazy" className="w-full h-full object-cover transition-all duration-700 group-hover:scale-105"
               style={{ filter: 'brightness(0.8) saturate(0.85)' }} />
           </div>
         ))}
       </div>
+    </div>
+  );
+}
+
+/* ═══════════════════ CASE PROGRESS BAR ═══════════════════ */
+function CaseProgress() {
+  const { scrollYProgress } = useScroll();
+  const scaleX = useSpring(scrollYProgress, { stiffness: 80, damping: 30 });
+  return (
+    <div className="fixed top-0 left-0 right-0 z-50 h-[2px]" style={{ backgroundColor: 'rgba(255,255,255,0.03)' }}>
+      <motion.div className="h-full origin-left" style={{
+        scaleX,
+        background: `linear-gradient(90deg, ${GOLD_DIM}, ${GOLD}, ${GOLD_BRIGHT})`,
+      }} />
+    </div>
+  );
+}
+
+/* ═══════════════════ CRIME TAPE DIVIDER ═══════════════════ */
+function CrimeTape({ text = 'УЛИКИ · ДЕЛО №001 · СЕКРЕТНО' }: { text?: string }) {
+  const ref = useRef(null);
+  const inView = useInView(ref, { once: true, margin: '-40px' });
+  return (
+    <motion.div ref={ref} initial={{ opacity: 0 }} animate={inView ? { opacity: 1 } : {}}
+      transition={{ duration: 0.8 }} className="relative py-6 overflow-hidden">
+      <div className="absolute left-0 right-0 h-[1px] top-1/2 -translate-y-1/2"
+        style={{ background: `linear-gradient(90deg, transparent 0%, ${GOLD}15 20%, ${GOLD}25 50%, ${GOLD}15 80%, transparent 100%)` }} />
+      <div className="flex justify-center">
+        <span className="px-6 py-1.5 text-[9px] uppercase tracking-[0.4em] relative z-10"
+          style={{ color: GOLD_DIM, backgroundColor: DARK, fontFamily: "'JetBrains Mono', monospace" }}>
+          {text}
+        </span>
+      </div>
+    </motion.div>
+  );
+}
+
+/* ═══════════════════ PARALLAX HERO IMAGE ═══════════════════ */
+function ParallaxHeroImage() {
+  const ref = useRef(null);
+  const { scrollYProgress } = useScroll({ target: ref, offset: ['start start', 'end start'] });
+  const y = useTransform(scrollYProgress, [0, 1], ['0%', '20%']);
+  const opacity = useTransform(scrollYProgress, [0, 0.6], [1, 0]);
+  const scale = useTransform(scrollYProgress, [0, 1], [1, 1.1]);
+
+  return (
+    <motion.div ref={ref} className="absolute top-0 right-0 bottom-0 w-[55%] hidden md:block" style={{ y, opacity }}>
+      <motion.img src={`${R2}/photo_2026-02-16_12-23-44.jpg`} alt=""
+        className="absolute inset-0 w-full h-full object-cover"
+        style={{ scale, filter: 'contrast(1.15) saturate(0.7) brightness(0.55)', objectPosition: '80% 20%' }} />
+      <div className="absolute inset-0"
+        style={{ background: `linear-gradient(to right, ${DARK} 0%, rgba(7,7,10,0.92) 10%, rgba(7,7,10,0.5) 30%, rgba(7,7,10,0.1) 50%, transparent 70%)` }} />
+      <div className="absolute bottom-0 left-0 right-0 h-[40%]"
+        style={{ background: `linear-gradient(to top, ${DARK} 0%, transparent 100%)` }} />
+      <div className="absolute top-0 left-0 right-0 h-32"
+        style={{ background: `linear-gradient(to bottom, ${DARK} 0%, transparent 100%)` }} />
+      <div className="absolute inset-0"
+        style={{ background: 'linear-gradient(180deg, rgba(15,12,8,0.3) 0%, rgba(7,7,10,0.15) 50%, rgba(7,7,10,0.4) 100%)' }} />
+      <div className="absolute inset-0" style={{ boxShadow: 'inset 0 0 150px rgba(0,0,0,0.5)' }} />
+    </motion.div>
+  );
+}
+
+/* ═══════════════════ FLASHLIGHT CURSOR ═══════════════════ */
+function FlashlightCursor() {
+  const cursorX = useMotionValue(-100);
+  const cursorY = useMotionValue(-100);
+  const springX = useSpring(cursorX, { stiffness: 300, damping: 28 });
+  const springY = useSpring(cursorY, { stiffness: 300, damping: 28 });
+
+  useEffect(() => {
+    const onMove = (e: MouseEvent) => {
+      cursorX.set(e.clientX);
+      cursorY.set(e.clientY);
+    };
+    window.addEventListener('mousemove', onMove, { passive: true });
+    return () => window.removeEventListener('mousemove', onMove);
+  }, [cursorX, cursorY]);
+
+  return (
+    <>
+      {/* Flashlight ambient glow */}
+      <motion.div className="fixed top-0 left-0 z-[9998] pointer-events-none hidden lg:block"
+        style={{
+          x: springX, y: springY,
+          translateX: '-50%', translateY: '-50%',
+          width: 500, height: 500,
+          background: 'radial-gradient(circle, rgba(212,165,70,0.025) 0%, rgba(212,165,70,0.01) 30%, transparent 70%)',
+          filter: 'blur(10px)',
+        }} />
+      {/* Crosshair cursor */}
+      <motion.div className="fixed top-0 left-0 z-[10000] pointer-events-none hidden lg:block"
+        style={{ x: springX, y: springY, translateX: '-50%', translateY: '-50%' }}>
+        <motion.div className="rounded-full"
+          style={{ width: 8, height: 8, border: `1.5px solid ${GOLD}60` }}
+          animate={{ scale: [1, 1.2, 1] }}
+          transition={{ duration: 2, repeat: Infinity, ease: 'easeInOut' }} />
+        <div className="absolute -translate-x-1/2 -translate-y-1/2 top-1/2 left-1/2">
+          <div className="absolute w-[1px] h-3 -top-5 left-1/2 -translate-x-1/2" style={{ backgroundColor: `${GOLD}25` }} />
+          <div className="absolute w-[1px] h-3 -bottom-[-2px] left-1/2 -translate-x-1/2" style={{ backgroundColor: `${GOLD}25` }} />
+          <div className="absolute h-[1px] w-3 top-1/2 -left-5 -translate-y-1/2" style={{ backgroundColor: `${GOLD}25` }} />
+          <div className="absolute h-[1px] w-3 top-1/2 -right-[-2px] -translate-y-1/2" style={{ backgroundColor: `${GOLD}25` }} />
+        </div>
+      </motion.div>
+    </>
+  );
+}
+
+/* ═══════════════════ SCAN LINE ═══════════════════ */
+function ScanLine() {
+  return (
+    <div className="absolute inset-0 pointer-events-none overflow-hidden z-30 opacity-[0.015]">
+      <div className="scan-line absolute left-0 right-0 h-[1px]" style={{ backgroundColor: GOLD }} />
     </div>
   );
 }
@@ -257,38 +472,19 @@ export default function PublicLandingPage() {
   const goAuth = useCallback(() => navigate('/auth'), [navigate]);
 
   return (
-    <div className="min-h-screen text-gray-200 overflow-x-hidden" style={{ background: '#07070a' }}>
+    <div className="min-h-screen text-gray-200 overflow-x-hidden relative" style={{ background: DARK }}>
+
+      <FilmGrain />
+      <CaseProgress />
+      <FlashlightCursor />
 
       {/* ═══════ HERO ═══════ */}
       <section className="relative min-h-screen flex items-center overflow-hidden">
         <div className="absolute inset-0">
-          {/* Dark base */}
-          <div className="absolute inset-0" style={{ background: '#07070a' }} />
+          <div className="absolute inset-0" style={{ background: DARK }} />
+          <ParallaxHeroImage />
 
-          {/* Detective photo — RIGHT HALF ONLY */}
-          <div className="absolute top-0 right-0 bottom-0 w-[65%] hidden md:block">
-            <img src={`${R2}/photo_2026-02-16_12-23-44.jpg`} alt=""
-              className="absolute inset-0 w-full h-full object-cover"
-              style={{ filter: 'contrast(1.15) saturate(0.7) brightness(0.55)', objectPosition: 'center 20%' }} />
-
-            {/* Left fade — seamless blend into dark background */}
-            <div className="absolute inset-0"
-              style={{ background: 'linear-gradient(to right, #07070a 0%, rgba(7,7,10,0.85) 15%, rgba(7,7,10,0.3) 40%, transparent 60%)' }} />
-
-            {/* Bottom fade */}
-            <div className="absolute bottom-0 left-0 right-0 h-[35%]"
-              style={{ background: 'linear-gradient(to top, #07070a 0%, transparent 100%)' }} />
-
-            {/* Top fade */}
-            <div className="absolute top-0 left-0 right-0 h-28"
-              style={{ background: 'linear-gradient(to bottom, #07070a 0%, transparent 100%)' }} />
-
-            {/* Color grade overlay */}
-            <div className="absolute inset-0"
-              style={{ background: 'linear-gradient(180deg, rgba(15,12,8,0.3) 0%, rgba(7,7,10,0.15) 50%, rgba(7,7,10,0.4) 100%)' }} />
-          </div>
-
-          {/* Mobile — faded background */}
+          {/* Mobile */}
           <div className="absolute inset-0 md:hidden">
             <img src={`${R2}/photo_2026-02-16_12-23-44.jpg`} alt=""
               className="absolute inset-0 w-full h-full object-cover"
@@ -296,20 +492,25 @@ export default function PublicLandingPage() {
             <div className="absolute inset-0" style={{ background: 'rgba(7,7,10,0.7)' }} />
           </div>
 
-          {/* Warm ambient glow */}
-          <div className="absolute inset-0 bg-[radial-gradient(circle_at_70%_40%,_rgba(160,115,40,0.06)_0%,_transparent_50%)]" />
+          {/* Ambient glows */}
+          <div className="absolute inset-0 bg-[radial-gradient(circle_at_25%_50%,_rgba(160,115,40,0.04)_0%,_transparent_40%)]" />
+          <div className="absolute inset-0 bg-[radial-gradient(circle_at_70%_30%,_rgba(160,115,40,0.05)_0%,_transparent_50%)]" />
+          <div className="absolute inset-0 bg-[radial-gradient(ellipse_80%_50%_at_50%_100%,_rgba(10,8,4,0.8)_0%,_transparent_60%)]" />
 
-          <FloatingParticles />
+          <SmokeParticles />
+          <FloatingDust />
+          <ScanLine />
         </div>
 
         {/* Content */}
         <div className="relative z-10 max-w-7xl mx-auto px-6 sm:px-10 w-full">
-          <div className="max-w-xl lg:max-w-[560px]">
-            {/* Beta */}
+          <div className="max-w-xl lg:max-w-[600px]">
+
+            {/* Badge */}
             <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.8, delay: 0.3 }} className="mb-8">
-              <span className="inline-flex items-center gap-2.5 text-[10px] uppercase tracking-[0.35em] px-4 py-2 border"
-                style={{ color: GOLD_DIM, borderColor: `${GOLD}15`, backgroundColor: `${GOLD}06`,
+              <span className="inline-flex items-center gap-2.5 text-[10px] uppercase tracking-[0.35em] px-4 py-2 border classified-glow"
+                style={{ color: GOLD_DIM, borderColor: `${GOLD}18`, backgroundColor: `${GOLD}06`,
                   fontFamily: "'JetBrains Mono', monospace" }}>
                 <span className="w-1.5 h-1.5 rounded-full animate-pulse" style={{ backgroundColor: GOLD }} />
                 Бета · Дело №001 · Доступ разрешён
@@ -317,26 +518,34 @@ export default function PublicLandingPage() {
             </motion.div>
 
             {/* Title */}
-            <motion.h1 initial={{ opacity: 0, y: 30 }} animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 1.1, delay: 0.5, ease: [0.22, 1, 0.36, 1] }} className="mb-3">
-              <span className="block text-[3.5rem] sm:text-[4.5rem] md:text-[5.5rem] lg:text-[6.5rem] leading-[0.88] tracking-tight"
+            <motion.h1 initial={{ opacity: 0 }} animate={{ opacity: 1 }}
+              transition={{ duration: 0.5, delay: 0.4 }} className="mb-3">
+              <motion.span
+                initial={{ opacity: 0, y: 50, rotateX: 30 }}
+                animate={{ opacity: 1, y: 0, rotateX: 0 }}
+                transition={{ duration: 1.2, delay: 0.5, ease: [0.22, 1, 0.36, 1] }}
+                className="block text-[3.5rem] sm:text-[4.5rem] md:text-[5.5rem] lg:text-[6.5rem] leading-[0.88] tracking-tight"
                 style={{ fontFamily: "'Playfair Display', serif", color: '#e8e6e3',
                   textShadow: '0 4px 30px rgba(0,0,0,0.6)' }}>
                 СТАНЬ
-              </span>
-              <span className="block text-[3.5rem] sm:text-[4.5rem] md:text-[5.5rem] lg:text-[6.5rem] leading-[0.88] tracking-tight mt-1"
+              </motion.span>
+              <motion.span
+                initial={{ opacity: 0, y: 50, rotateX: 30 }}
+                animate={{ opacity: 1, y: 0, rotateX: 0 }}
+                transition={{ duration: 1.2, delay: 0.7, ease: [0.22, 1, 0.36, 1] }}
+                className="block text-[3.5rem] sm:text-[4.5rem] md:text-[5.5rem] lg:text-[6.5rem] leading-[0.88] tracking-tight mt-1"
                 style={{ fontFamily: "'Playfair Display', serif",
                   background: `linear-gradient(135deg, ${GOLD_BRIGHT} 0%, ${GOLD} 50%, ${GOLD_DIM} 100%)`,
                   WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>
                 ДЕТЕКТИВОМ
-              </span>
+              </motion.span>
             </motion.h1>
 
             {/* Decorative line */}
-            <motion.div initial={{ scaleX: 0 }} animate={{ scaleX: 1 }}
-              transition={{ duration: 1, delay: 0.9 }}
+            <motion.div initial={{ scaleX: 0, opacity: 0 }} animate={{ scaleX: 1, opacity: 1 }}
+              transition={{ duration: 1.2, delay: 0.9 }}
               className="h-[2px] w-20 sm:w-28 origin-left mb-7"
-              style={{ background: `linear-gradient(90deg, ${GOLD}, transparent)` }} />
+              style={{ background: `linear-gradient(90deg, ${GOLD}, ${GOLD}40, transparent)` }} />
 
             {/* Typewriter */}
             <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}
@@ -384,12 +593,20 @@ export default function PublicLandingPage() {
         </motion.div>
       </section>
 
+      <CrimeTape text="МАТЕРИАЛЫ ДЕЛА · СЕКРЕТНО · ДЕЛО №001" />
+
       {/* ═══════ INTERROGATION ═══════ */}
       <section id="interrogation" className="relative py-24 sm:py-32 px-6">
-        <div className="max-w-6xl mx-auto">
-          <SR>
+        <div className="absolute inset-0 bg-[radial-gradient(ellipse_60%_40%_at_80%_50%,_rgba(212,165,70,0.02)_0%,_transparent_60%)]" />
+        <div className="max-w-6xl mx-auto relative">
+          <SR direction="left">
             <div className="max-w-2xl mb-6">
-              <span className="section-label" style={{ color: GOLD_DIM }}>Живой допрос</span>
+              <div className="flex items-center gap-3 mb-4">
+                <span className="section-label mb-0" style={{ color: GOLD_DIM }}>Живой допрос</span>
+                <motion.div animate={{ opacity: [0.3, 1, 0.3] }}
+                  transition={{ duration: 2, repeat: Infinity }}
+                  className="w-2 h-2 rounded-full" style={{ backgroundColor: '#cc3700' }} />
+              </div>
               <h2 className="section-title">
                 Подозреваемые, которые <span style={{ color: GOLD }}>лгут</span>
               </h2>
@@ -399,9 +616,7 @@ export default function PublicLandingPage() {
               </p>
             </div>
           </SR>
-
           <SR delay={0.12} className="mb-5"><EmotionCycler /></SR>
-
           <SR delay={0.18} className="mb-10">
             <div className="flex flex-wrap gap-2">
               {['Система эмоций', 'Психологический портрет', 'Предъявление улик'].map(t => (
@@ -409,9 +624,8 @@ export default function PublicLandingPage() {
               ))}
             </div>
           </SR>
-
-          <SR delay={0.25}>
-            <MonitorFrame src={`${R2}/dopros.png`} alt="Интерфейс допроса" />
+          <SR delay={0.25} direction="scale">
+            <MonitorFrame src={`${R2}/dopros.png`} alt="Интерфейс допроса" stamp="УЛИКА А-1" />
           </SR>
         </div>
       </section>
@@ -419,19 +633,24 @@ export default function PublicLandingPage() {
       {/* ═══════ MICRO CTA ═══════ */}
       <section className="py-8 px-6">
         <SR className="text-center">
-          <motion.button onClick={goAuth}
-            whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.97 }}
-            className="group px-6 py-3 text-xs font-bold uppercase tracking-widest border transition-all duration-400 hover:bg-[rgba(212,165,70,0.06)] hover:border-[#d4a546] hover:text-[#d4a546] hover:shadow-[0_0_30px_rgba(212,165,70,0.08)]"
-            style={{ borderColor: `${GOLD}35`, color: GOLD_DIM }}>
-            Попробовать бесплатно →
-          </motion.button>
+          <Magnetic>
+            <motion.button onClick={goAuth}
+              whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.97 }}
+              className="group px-6 py-3 text-xs font-bold uppercase tracking-widest border transition-all duration-400 hover:bg-[rgba(212,165,70,0.06)] hover:border-[#d4a546] hover:text-[#d4a546] hover:shadow-[0_0_30px_rgba(212,165,70,0.08)]"
+              style={{ borderColor: `${GOLD}35`, color: GOLD_DIM, cursor: 'none' }}>
+              Попробовать бесплатно →
+            </motion.button>
+          </Magnetic>
         </SR>
       </section>
 
+      <CrimeTape text="ДОСКА УЛИК · ДЕДУКЦИЯ · АНАЛИЗ" />
+
       {/* ═══════ BOARD ═══════ */}
       <section className="relative py-24 sm:py-32 px-6">
-        <div className="max-w-6xl mx-auto">
-          <SR>
+        <div className="absolute inset-0 bg-[radial-gradient(ellipse_50%_40%_at_20%_50%,_rgba(212,165,70,0.02)_0%,_transparent_60%)]" />
+        <div className="max-w-6xl mx-auto relative">
+          <SR direction="right">
             <div className="max-w-2xl mb-6">
               <span className="section-label" style={{ color: GOLD_DIM }}>Дедукция</span>
               <h2 className="section-title">
@@ -443,7 +662,6 @@ export default function PublicLandingPage() {
               </p>
             </div>
           </SR>
-
           <SR delay={0.15} className="mb-10">
             <div className="flex flex-wrap gap-2">
               {['Drag & Drop', 'Валидация связей', 'Архив улик', 'Красные нити'].map(t => (
@@ -451,15 +669,15 @@ export default function PublicLandingPage() {
               ))}
             </div>
           </SR>
-
-          <SR delay={0.25}>
-            <MonitorFrame src={`${R2}/doska.png`} alt="Доска улик" />
+          <SR delay={0.25} direction="scale">
+            <MonitorFrame src={`${R2}/doska.png`} alt="Доска улик" stamp="ВЕЩДОК №3" />
           </SR>
         </div>
       </section>
 
       {/* ═══════ LOCATIONS ═══════ */}
       <section className="relative py-24 sm:py-32 overflow-hidden">
+        <div className="absolute inset-0 bg-[radial-gradient(ellipse_60%_30%_at_50%_50%,_rgba(212,165,70,0.015)_0%,_transparent_70%)]" />
         <div className="max-w-6xl mx-auto px-6 mb-10">
           <SR className="text-center">
             <span className="section-label" style={{ color: GOLD_DIM }}>Атмосфера</span>
@@ -471,7 +689,9 @@ export default function PublicLandingPage() {
         <SR><LocationsMarquee /></SR>
       </section>
 
-      {/* ═══════ HOW IT WORKS — MODERN GRID ═══════ */}
+      <CrimeTape text="ХОД РАССЛЕДОВАНИЯ · 4 ЭТАПА · ПРОТОКОЛ" />
+
+      {/* ═══════ HOW IT WORKS ═══════ */}
       <section className="relative py-24 sm:py-32 px-6">
         <div className="max-w-6xl mx-auto">
           <SR className="text-center mb-14">
@@ -490,36 +710,27 @@ export default function PublicLandingPage() {
             ].map((step, i) => (
               <SR key={step.num} delay={i * 0.1}>
                 <motion.div
-                  whileHover={{ y: -6, borderColor: step.accent + '35' }}
+                  whileHover={{ y: -8, borderColor: step.accent + '40' }}
                   transition={{ duration: 0.35 }}
-                  className="relative rounded-xl border p-6 sm:p-7 h-full group cursor-default"
-                  style={{ borderColor: 'rgba(255,255,255,0.05)', backgroundColor: 'rgba(12,12,16,0.5)' }}>
-
-                  {/* Hover glow */}
+                  className="relative rounded-xl border p-6 sm:p-7 h-full group step-card"
+                  style={{ borderColor: 'rgba(255,255,255,0.05)', backgroundColor: 'rgba(12,12,16,0.5)', cursor: 'none' }}>
                   <div className="absolute inset-0 rounded-xl opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none"
-                    style={{ background: `radial-gradient(circle at 50% 0%, ${step.accent}08 0%, transparent 70%)` }} />
-
-                  {/* Number */}
+                    style={{ background: `radial-gradient(circle at 50% 0%, ${step.accent}0c 0%, transparent 70%)` }} />
                   <span className="text-[11px] font-bold tracking-[0.3em] block mb-5"
-                    style={{ color: step.accent + '50', fontFamily: "'JetBrains Mono', monospace" }}>
-                    {step.num}
-                  </span>
-
-                  {/* Icon */}
-                  <div className="mb-4 w-10 h-10 rounded-lg flex items-center justify-center transition-colors duration-300"
-                    style={{ backgroundColor: step.accent + '0c', border: `1px solid ${step.accent}12` }}>
+                    style={{ color: step.accent + '50', fontFamily: "'JetBrains Mono', monospace" }}>{step.num}</span>
+                  <div className="mb-4 w-10 h-10 rounded-lg flex items-center justify-center transition-all duration-300 group-hover:shadow-lg"
+                    style={{ backgroundColor: step.accent + '0c', border: `1px solid ${step.accent}15` }}>
                     <step.icon size={18} style={{ color: step.accent }} strokeWidth={1.5} />
                   </div>
-
                   <h3 className="text-lg font-bold mb-2.5"
-                    style={{ fontFamily: "'Playfair Display', serif", color: '#e0deda' }}>
-                    {step.title}
-                  </h3>
+                    style={{ fontFamily: "'Playfair Display', serif", color: '#e0deda' }}>{step.title}</h3>
                   <p className="text-sm leading-relaxed" style={{ color: '#666670' }}>{step.desc}</p>
-
-                  {/* Bottom line */}
                   <div className="absolute bottom-0 left-6 right-6 h-px opacity-0 group-hover:opacity-100 transition-opacity duration-500"
-                    style={{ background: `linear-gradient(90deg, transparent, ${step.accent}25, transparent)` }} />
+                    style={{ background: `linear-gradient(90deg, transparent, ${step.accent}30, transparent)` }} />
+                  <div className="absolute top-0 right-0 w-8 h-8 opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none">
+                    <div className="absolute top-0 right-0 w-full h-[1px]" style={{ background: `linear-gradient(to left, ${step.accent}40, transparent)` }} />
+                    <div className="absolute top-0 right-0 h-full w-[1px]" style={{ background: `linear-gradient(to bottom, ${step.accent}40, transparent)` }} />
+                  </div>
                 </motion.div>
               </SR>
             ))}
@@ -547,7 +758,7 @@ export default function PublicLandingPage() {
             ].map((item, i) => (
               <SR key={item.label} delay={i * 0.08}
                 className={i === 4 ? 'sm:col-span-2 sm:max-w-sm sm:mx-auto sm:w-full' : ''}>
-                <div className="rounded-xl border p-5 transition-all duration-300 hover:border-[rgba(255,255,255,0.1)]"
+                <div className="rounded-xl border p-5 transition-all duration-300 hover:border-[rgba(255,255,255,0.1)] score-card"
                   style={{ backgroundColor: 'rgba(12,12,16,0.5)', borderColor: 'rgba(255,255,255,0.05)' }}>
                   <div className="flex items-center justify-between mb-3">
                     <span className="text-sm" style={{ color: '#a0a0a8' }}>{item.label}</span>
@@ -574,10 +785,15 @@ export default function PublicLandingPage() {
           <div className="flex items-center justify-center gap-3">
             <div className="flex -space-x-2">
               {['#c9a84c', '#8b5cf6', '#3b82f6', '#10b981'].map((c, i) => (
-                <div key={i} className="w-8 h-8 rounded-full border-2 flex items-center justify-center text-[10px] font-bold"
-                  style={{ backgroundColor: c + '18', borderColor: '#07070a', color: c }}>
+                <motion.div key={i}
+                  initial={{ scale: 0, opacity: 0 }}
+                  whileInView={{ scale: 1, opacity: 1 }}
+                  viewport={{ once: true }}
+                  transition={{ delay: i * 0.1, type: 'spring', stiffness: 300 }}
+                  className="w-8 h-8 rounded-full border-2 flex items-center justify-center text-[10px] font-bold"
+                  style={{ backgroundColor: c + '18', borderColor: DARK, color: c }}>
                   {['АК', 'МВ', 'ДС', 'ИП'][i]}
-                </div>
+                </motion.div>
               ))}
             </div>
             <p className="text-sm" style={{ color: '#666' }}>
@@ -590,6 +806,8 @@ export default function PublicLandingPage() {
           </div>
         </SR>
       </section>
+
+      <CrimeTape text="ВОПРОСЫ · ОТВЕТЫ · СПРАВКА" />
 
       {/* ═══════ FAQ ═══════ */}
       <section className="relative py-24 sm:py-32 px-6">
@@ -611,9 +829,31 @@ export default function PublicLandingPage() {
       {/* ═══════ FINAL CTA ═══════ */}
       <section className="relative py-32 sm:py-40 px-6 text-center overflow-hidden">
         <div className="absolute inset-0 bg-[radial-gradient(ellipse_50%_35%_at_50%_50%,_rgba(212,165,70,0.04)_0%,_transparent_70%)]" />
+
+        {/* Rotating light rays */}
+        <div className="absolute inset-0 pointer-events-none overflow-hidden">
+          <motion.div
+            animate={{ rotate: [0, 360] }}
+            transition={{ duration: 120, repeat: Infinity, ease: 'linear' }}
+            className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[800px] h-[800px]"
+            style={{
+              background: `conic-gradient(from 0deg, transparent 0%, rgba(212,165,70,0.02) 5%, transparent 10%, transparent 25%, rgba(212,165,70,0.015) 30%, transparent 35%, transparent 50%, rgba(212,165,70,0.02) 55%, transparent 60%, transparent 75%, rgba(212,165,70,0.015) 80%, transparent 85%)`,
+            }} />
+        </div>
+
         <SR>
           <div className="relative z-10 max-w-2xl mx-auto">
-            <span className="section-label" style={{ color: GOLD_DIM }}>Первое дело — бесплатно</span>
+            <motion.div
+              initial={{ scale: 0, opacity: 0 }}
+              whileInView={{ scale: 1, opacity: 1 }}
+              viewport={{ once: true }}
+              transition={{ type: 'spring', stiffness: 200, delay: 0.2 }}
+              className="mb-6 inline-flex items-center justify-center w-14 h-14 rounded-full"
+              style={{ border: `1px solid ${GOLD}20`, background: `${GOLD}08` }}>
+              <Fingerprint size={24} style={{ color: GOLD_DIM }} strokeWidth={1.2} />
+            </motion.div>
+
+            <span className="section-label block" style={{ color: GOLD_DIM }}>Первое дело — бесплатно</span>
             <h2 className="text-4xl sm:text-5xl md:text-6xl font-bold mb-6 mt-4"
               style={{ fontFamily: "'Playfair Display', serif", color: '#e8e6e3' }}>
               Истина ждёт<span style={{ color: GOLD }}>.</span>
@@ -625,7 +865,7 @@ export default function PublicLandingPage() {
             <GoldButton onClick={goAuth}>Начать расследование</GoldButton>
             <p className="mt-8 text-sm" style={{ color: '#3a3a3a' }}>
               Уже есть аккаунт?{' '}
-              <button onClick={goAuth} className="underline underline-offset-2 transition-colors hover:text-gray-400">Войти</button>
+              <button onClick={goAuth} className="underline underline-offset-2 transition-colors hover:text-gray-400" style={{ cursor: 'none' }}>Войти</button>
             </p>
           </div>
         </SR>
@@ -651,76 +891,94 @@ export default function PublicLandingPage() {
       <style>{`
         @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500&family=Playfair+Display:ital,wght@0,400;0,700;0,900;1,400&family=Source+Sans+3:wght@200;300;400;600;700&display=swap');
 
-        @keyframes marquee-slide {
-          0% { transform: translateX(0); }
-          100% { transform: translateX(-50%); }
+        /* Film grain */
+        @keyframes grain {
+          0%, 100% { transform: translate(0, 0); }
+          10% { transform: translate(-5%, -10%); }
+          20% { transform: translate(-15%, 5%); }
+          30% { transform: translate(7%, -25%); }
+          40% { transform: translate(-5%, 25%); }
+          50% { transform: translate(-15%, 10%); }
+          60% { transform: translate(15%, 0%); }
+          70% { transform: translate(0%, 15%); }
+          80% { transform: translate(3%, 35%); }
+          90% { transform: translate(-10%, 10%); }
         }
-        .marquee-track {
-          animation: marquee-slide 60s linear infinite;
+        .film-grain {
+          width: 300%; height: 300%;
+          background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='1'/%3E%3C/svg%3E");
+          animation: grain 0.5s steps(6) infinite;
         }
 
-        @keyframes particle-drift {
+        /* Marquee */
+        @keyframes marquee-slide { 0% { transform: translateX(0); } 100% { transform: translateX(-50%); } }
+        .marquee-track { animation: marquee-slide 60s linear infinite; }
+        .marquee-track:hover { animation-play-state: paused; }
+
+        /* Particles */
+        @keyframes dust-drift {
           0%, 100% { transform: translateY(0) translateX(0); opacity: inherit; }
-          50% { transform: translateY(-70px) translateX(10px); opacity: 0.3; }
+          25% { transform: translateY(-40px) translateX(15px); }
+          50% { transform: translateY(-80px) translateX(-5px); opacity: 0.35; }
+          75% { transform: translateY(-40px) translateX(-15px); }
         }
-        .particle-float {
-          animation: particle-drift ease-in-out infinite;
+        .dust-float { animation: dust-drift ease-in-out infinite; }
+
+        @keyframes smoke-move {
+          0% { transform: translate(0, 0) scale(1); opacity: inherit; }
+          33% { transform: translate(30px, -40px) scale(1.2); }
+          66% { transform: translate(-20px, -80px) scale(0.8); opacity: 0.02; }
+          100% { transform: translate(10px, -120px) scale(1.1); opacity: 0; }
+        }
+        .smoke-drift { animation: smoke-move ease-in-out infinite; }
+
+        /* Scan line */
+        @keyframes scan { 0% { top: -2%; } 100% { top: 102%; } }
+        .scan-line { animation: scan 8s linear infinite; }
+
+        /* Classified badge */
+        .classified-glow { transition: all 0.4s ease; }
+        .classified-glow:hover {
+          box-shadow: 0 0 20px rgba(212,165,70,0.08), inset 0 0 20px rgba(212,165,70,0.03);
+          border-color: rgba(212,165,70,0.2) !important;
         }
 
+        /* Section styles */
         .section-label {
-          display: inline-block;
-          font-size: 10px;
-          text-transform: uppercase;
-          letter-spacing: 0.3em;
-          margin-bottom: 1rem;
-          font-family: 'JetBrains Mono', monospace;
+          display: inline-block; font-size: 10px; text-transform: uppercase;
+          letter-spacing: 0.3em; margin-bottom: 1rem; font-family: 'JetBrains Mono', monospace;
         }
-
         .section-title {
-          font-family: 'Playfair Display', serif;
-          font-size: clamp(1.875rem, 4vw, 3rem);
-          font-weight: 700;
-          color: #e8e6e3;
-          line-height: 1.15;
-          margin-bottom: 1rem;
+          font-family: 'Playfair Display', serif; font-size: clamp(1.875rem, 4vw, 3rem);
+          font-weight: 700; color: #e8e6e3; line-height: 1.15; margin-bottom: 1rem;
         }
-
         .section-desc {
-          color: #7a7a84;
-          font-size: 1rem;
-          line-height: 1.7;
-          font-weight: 300;
-          max-width: 560px;
-          font-family: 'Source Sans 3', sans-serif;
+          color: #7a7a84; font-size: 1rem; line-height: 1.7; font-weight: 300;
+          max-width: 560px; font-family: 'Source Sans 3', sans-serif;
         }
-        @media (min-width: 640px) {
-          .section-desc { font-size: 1.1rem; }
-        }
+        @media (min-width: 640px) { .section-desc { font-size: 1.1rem; } }
 
         .tech-tag {
-          display: inline-block;
-          padding: 6px 14px;
-          border-radius: 100px;
-          font-size: 12px;
-          letter-spacing: 0.02em;
-          border: 1px solid rgba(255,255,255,0.08);
-          color: #888;
-          background: rgba(255,255,255,0.02);
-          font-family: 'JetBrains Mono', monospace;
+          display: inline-block; padding: 6px 14px; border-radius: 100px; font-size: 12px;
+          letter-spacing: 0.02em; border: 1px solid rgba(255,255,255,0.08); color: #888;
+          background: rgba(255,255,255,0.02); font-family: 'JetBrains Mono', monospace;
           transition: all 0.3s ease;
         }
-        .tech-tag:hover {
-          border-color: rgba(212,165,70,0.3);
-          color: #c9a84c;
-          background: rgba(212,165,70,0.04);
+        .tech-tag:hover { border-color: rgba(212,165,70,0.3); color: #c9a84c; background: rgba(212,165,70,0.04); }
+
+        .step-card, .score-card {
+          backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px);
         }
 
         ::-webkit-scrollbar { width: 6px; }
         ::-webkit-scrollbar-track { background: #07070a; }
         ::-webkit-scrollbar-thumb { background: #1a1a1a; border-radius: 3px; }
         ::-webkit-scrollbar-thumb:hover { background: #2a2a2a; }
-
         ::selection { background: rgba(212,165,70,0.2); color: #f0d060; }
+        html { scroll-behavior: smooth; }
+
+        /* Custom cursor (desktop only) */
+        @media (min-width: 1024px) { * { cursor: none !important; } }
       `}</style>
     </div>
   );

@@ -80,130 +80,6 @@ function AnimatedCounter({ target, suffix = '', duration = 2000 }: { target: num
   return <span ref={ref}>{value.toLocaleString()}{suffix}</span>;
 }
 
-/* ═══════════════════ FILM GRAIN (hidden on mobile) ═══════════════════ */
-function FilmGrain() {
-  return (
-    <div className="fixed inset-0 z-[9999] pointer-events-none mix-blend-overlay opacity-[0.035] hidden sm:block">
-      <div className="absolute inset-0 film-grain" />
-    </div>
-  );
-}
-
-/* ═══════════════════ SMOKE PARTICLES ═══════════════════ */
-function SmokeParticles() {
-  const particles = useMemo(() =>
-    Array.from({ length: 18 }, (_, i) => ({
-      id: i, x: Math.random() * 100, y: Math.random() * 100,
-      size: Math.random() * 120 + 40,
-      dur: Math.random() * 30 + 20,
-      delay: Math.random() * 15,
-      opacity: Math.random() * 0.03 + 0.01,
-    }))
-  , []);
-
-  return (
-    <div className="absolute inset-0 overflow-hidden pointer-events-none">
-      {particles.map((p) => (
-        <div key={p.id} className="absolute rounded-full smoke-drift"
-          style={{
-            left: `${p.x}%`, top: `${p.y}%`, width: p.size, height: p.size,
-            background: `radial-gradient(circle, rgba(212,165,70,${p.opacity}) 0%, transparent 70%)`,
-            animationDuration: `${p.dur}s`, animationDelay: `${p.delay}s`,
-            filter: 'blur(30px)',
-          }} />
-      ))}
-    </div>
-  );
-}
-
-/* ═══════════════════ FLOATING DUST ═══════════════════ */
-function FloatingDust() {
-  const dust = useMemo(() =>
-    Array.from({ length: 30 }, (_, i) => ({
-      id: i, x: Math.random() * 100, y: Math.random() * 100,
-      size: Math.random() * 2 + 0.5, dur: Math.random() * 25 + 18,
-      delay: Math.random() * 12, opacity: Math.random() * 0.2 + 0.05,
-    }))
-  , []);
-
-  return (
-    <div className="absolute inset-0 overflow-hidden pointer-events-none">
-      {dust.map((d) => (
-        <div key={d.id} className="absolute rounded-full dust-float"
-          style={{
-            left: `${d.x}%`, top: `${d.y}%`, width: d.size, height: d.size,
-            backgroundColor: GOLD, opacity: d.opacity,
-            animationDuration: `${d.dur}s`, animationDelay: `${d.delay}s`,
-          }} />
-      ))}
-    </div>
-  );
-}
-
-/* ═══════════════════ DETECTIVE SCROLL OBJECTS ═══════════════════ */
-const DETECTIVE_OBJECTS = [
-  { svg: '<svg viewBox="0 0 60 60" fill="none" xmlns="http://www.w3.org/2000/svg"><ellipse cx="30" cy="30" rx="18" ry="22" stroke="currentColor" stroke-width="0.8" opacity="0.5"/><ellipse cx="30" cy="30" rx="13" ry="17" stroke="currentColor" stroke-width="0.6" opacity="0.4"/><ellipse cx="30" cy="30" rx="8" ry="12" stroke="currentColor" stroke-width="0.5" opacity="0.3"/><ellipse cx="30" cy="30" rx="4" ry="7" stroke="currentColor" stroke-width="0.4" opacity="0.25"/><path d="M30 8 C30 8 42 18 42 30 C42 42 30 52 30 52" stroke="currentColor" stroke-width="0.5" opacity="0.3"/></svg>', x: '5%', y: '25%', size: 80, rotate: -15, section: 0 },
-  { svg: '<svg viewBox="0 0 60 60" fill="none" xmlns="http://www.w3.org/2000/svg"><ellipse cx="30" cy="30" rx="18" ry="22" stroke="currentColor" stroke-width="0.8" opacity="0.5"/><ellipse cx="30" cy="30" rx="13" ry="17" stroke="currentColor" stroke-width="0.6" opacity="0.4"/><ellipse cx="30" cy="30" rx="8" ry="12" stroke="currentColor" stroke-width="0.5" opacity="0.3"/></svg>', x: '92%', y: '65%', size: 55, rotate: 25, section: 2 },
-  { svg: '<svg viewBox="0 0 60 60" fill="none" xmlns="http://www.w3.org/2000/svg"><circle cx="25" cy="25" r="14" stroke="currentColor" stroke-width="1" opacity="0.4"/><circle cx="25" cy="25" r="10" stroke="currentColor" stroke-width="0.5" opacity="0.2"/><line x1="36" y1="36" x2="52" y2="52" stroke="currentColor" stroke-width="1.5" opacity="0.4" stroke-linecap="round"/></svg>', x: '88%', y: '15%', size: 70, rotate: 20, section: 1 },
-  { svg: '<svg viewBox="0 0 60 60" fill="none" xmlns="http://www.w3.org/2000/svg"><circle cx="25" cy="25" r="14" stroke="currentColor" stroke-width="1" opacity="0.4"/><line x1="36" y1="36" x2="52" y2="52" stroke="currentColor" stroke-width="1.5" opacity="0.4" stroke-linecap="round"/></svg>', x: '3%', y: '72%', size: 50, rotate: -30, section: 4 },
-  { svg: '<svg viewBox="0 0 40 60" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M12 15 C12 8 20 4 26 8 C32 12 28 20 20 22 L20 32" stroke="currentColor" stroke-width="1.2" opacity="0.35" stroke-linecap="round"/><circle cx="20" cy="40" r="2" fill="currentColor" opacity="0.3"/></svg>', x: '95%', y: '40%', size: 40, rotate: 10, section: 1 },
-  { svg: '<svg viewBox="0 0 40 60" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M12 15 C12 8 20 4 26 8 C32 12 28 20 20 22 L20 32" stroke="currentColor" stroke-width="1.2" opacity="0.35" stroke-linecap="round"/><circle cx="20" cy="40" r="2" fill="currentColor" opacity="0.3"/></svg>', x: '2%', y: '50%', size: 35, rotate: -8, section: 3 },
-  { svg: '<svg viewBox="0 0 20 50" fill="none" xmlns="http://www.w3.org/2000/svg"><rect x="4" y="15" width="12" height="30" rx="1" stroke="currentColor" stroke-width="0.8" opacity="0.3"/><path d="M4 15 L10 4 L16 15" stroke="currentColor" stroke-width="0.8" opacity="0.35"/><line x1="4" y1="20" x2="16" y2="20" stroke="currentColor" stroke-width="0.5" opacity="0.2"/></svg>', x: '8%', y: '85%', size: 30, rotate: 35, section: 2 },
-  { svg: '<svg viewBox="0 0 20 50" fill="none" xmlns="http://www.w3.org/2000/svg"><rect x="4" y="15" width="12" height="30" rx="1" stroke="currentColor" stroke-width="0.8" opacity="0.3"/><path d="M4 15 L10 4 L16 15" stroke="currentColor" stroke-width="0.8" opacity="0.35"/><line x1="4" y1="20" x2="16" y2="20" stroke="currentColor" stroke-width="0.5" opacity="0.2"/></svg>', x: '93%', y: '88%', size: 25, rotate: -20, section: 5 },
-  { svg: '<svg viewBox="0 0 40 70" fill="none" xmlns="http://www.w3.org/2000/svg"><ellipse cx="20" cy="40" rx="12" ry="20" stroke="currentColor" stroke-width="0.8" opacity="0.3"/><ellipse cx="12" cy="14" rx="5" ry="6" stroke="currentColor" stroke-width="0.6" opacity="0.25"/><ellipse cx="22" cy="10" rx="4.5" ry="5.5" stroke="currentColor" stroke-width="0.6" opacity="0.25"/><ellipse cx="31" cy="14" rx="4" ry="5" stroke="currentColor" stroke-width="0.6" opacity="0.2"/></svg>', x: '90%', y: '30%', size: 50, rotate: 15, section: 3 },
-  { svg: '<svg viewBox="0 0 40 70" fill="none" xmlns="http://www.w3.org/2000/svg"><ellipse cx="20" cy="40" rx="12" ry="20" stroke="currentColor" stroke-width="0.8" opacity="0.3"/><ellipse cx="12" cy="14" rx="5" ry="6" stroke="currentColor" stroke-width="0.6" opacity="0.25"/><ellipse cx="22" cy="10" rx="4.5" ry="5.5" stroke="currentColor" stroke-width="0.6" opacity="0.25"/></svg>', x: '6%', y: '60%', size: 45, rotate: -10, section: 5 },
-  { svg: '<svg viewBox="0 0 30 40" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M15 4 C15 4 4 18 4 25 C4 32 9 36 15 36 C21 36 26 32 26 25 C26 18 15 4 15 4Z" stroke="currentColor" stroke-width="0.8" opacity="0.3"/></svg>', x: '96%', y: '52%', size: 28, rotate: 8, section: 0 },
-  { svg: '<svg viewBox="0 0 30 40" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M15 4 C15 4 4 18 4 25 C4 32 9 36 15 36 C21 36 26 32 26 25 C26 18 15 4 15 4Z" stroke="currentColor" stroke-width="0.8" opacity="0.3"/></svg>', x: '4%', y: '38%', size: 22, rotate: -12, section: 4 },
-  { svg: '<svg viewBox="0 0 50 50" fill="none" xmlns="http://www.w3.org/2000/svg"><circle cx="25" cy="25" r="18" stroke="currentColor" stroke-width="0.6" opacity="0.25"/><circle cx="25" cy="25" r="10" stroke="currentColor" stroke-width="0.5" opacity="0.2"/><circle cx="25" cy="25" r="3" stroke="currentColor" stroke-width="0.4" opacity="0.2"/><line x1="25" y1="2" x2="25" y2="14" stroke="currentColor" stroke-width="0.5" opacity="0.2"/><line x1="25" y1="36" x2="25" y2="48" stroke="currentColor" stroke-width="0.5" opacity="0.2"/><line x1="2" y1="25" x2="14" y2="25" stroke="currentColor" stroke-width="0.5" opacity="0.2"/><line x1="36" y1="25" x2="48" y2="25" stroke="currentColor" stroke-width="0.5" opacity="0.2"/></svg>', x: '7%', y: '10%', size: 60, rotate: 0, section: 3 },
-  { svg: '<svg viewBox="0 0 60 30" fill="none" xmlns="http://www.w3.org/2000/svg"><circle cx="12" cy="15" r="8" stroke="currentColor" stroke-width="0.8" opacity="0.3"/><circle cx="12" cy="15" r="3" stroke="currentColor" stroke-width="0.5" opacity="0.2"/><line x1="20" y1="15" x2="52" y2="15" stroke="currentColor" stroke-width="0.8" opacity="0.3"/><line x1="45" y1="15" x2="45" y2="22" stroke="currentColor" stroke-width="0.7" opacity="0.25"/><line x1="50" y1="15" x2="50" y2="20" stroke="currentColor" stroke-width="0.7" opacity="0.25"/></svg>', x: '85%', y: '78%', size: 55, rotate: 25, section: 4 },
-  { svg: '<svg viewBox="0 0 60 35" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M4 17.5 C4 17.5 15 4 30 4 C45 4 56 17.5 56 17.5 C56 17.5 45 31 30 31 C15 31 4 17.5 4 17.5Z" stroke="currentColor" stroke-width="0.8" opacity="0.3"/><circle cx="30" cy="17.5" r="7" stroke="currentColor" stroke-width="0.6" opacity="0.25"/><circle cx="30" cy="17.5" r="3" fill="currentColor" opacity="0.15"/></svg>', x: '92%', y: '8%', size: 50, rotate: -5, section: 5 },
-];
-
-/* ═══════════ OPTIMIZED: single scroll listener for all objects ═══════════ */
-function DetectiveScrollObjects() {
-  const [visibleSections, setVisibleSections] = useState<Set<number>>(new Set());
-
-  useEffect(() => {
-    const handleScroll = () => {
-      const scrollY = window.scrollY;
-      const vh = window.innerHeight;
-      const newVisible = new Set<number>();
-      for (let s = 0; s <= 5; s++) {
-        const sectionStart = s * vh * 0.9;
-        const sectionEnd = sectionStart + vh * 1.5;
-        if (scrollY >= sectionStart - vh * 0.3 && scrollY <= sectionEnd) {
-          newVisible.add(s);
-        }
-      }
-      setVisibleSections(newVisible);
-    };
-
-    window.addEventListener('scroll', handleScroll, { passive: true });
-    handleScroll();
-    return () => window.removeEventListener('scroll', handleScroll);
-  }, []);
-
-  return (
-    <div className="fixed inset-0 pointer-events-none z-[1] overflow-hidden hidden lg:block">
-      {DETECTIVE_OBJECTS.map((obj, i) => (
-        <motion.div
-          key={i}
-          initial={{ opacity: 0, scale: 0.5 }}
-          animate={visibleSections.has(obj.section) ? { opacity: 1, scale: 1 } : { opacity: 0, scale: 0.5 }}
-          transition={{ duration: 1.2, delay: i * 0.05, ease: [0.22, 1, 0.36, 1] }}
-          className="absolute"
-          style={{
-            left: obj.x, top: obj.y,
-            width: obj.size, height: obj.size,
-            transform: `rotate(${obj.rotate}deg)`,
-            color: GOLD_DIM,
-          }}
-          dangerouslySetInnerHTML={{ __html: obj.svg }}
-        />
-      ))}
-    </div>
-  );
-}
 /* ═══════════════════ SCROLL REVEAL ═══════════════════ */
 function SR({ children, className = '', delay = 0, direction = 'up' }: {
   children: React.ReactNode; className?: string; delay?: number;
@@ -312,7 +188,7 @@ function FaqItem({ item, isOpen, onToggle }: { item: typeof FAQ[0]; isOpen: bool
   );
 }
 
-/* ═══════════════════ MONITOR FRAME (regular) ═══════════════════ */
+/* ═══════════════════ MONITOR FRAME ═══════════════════ */
 function MonitorFrame({ src, alt, stamp }: { src: string; alt: string; stamp?: string }) {
   return (
     <motion.div
@@ -347,105 +223,6 @@ function MonitorFrame({ src, alt, stamp }: { src: string; alt: string; stamp?: s
   );
 }
 
-/* ═══════════════════ MAGNIFIER FRAME — ref-based, zero rerenders ═══════════════════ */
-function MagnifierFrame({ src, alt, stamp }: { src: string; alt: string; stamp?: string }) {
-  const containerRef = useRef<HTMLDivElement>(null);
-  const imgRef = useRef<HTMLImageElement>(null);
-  const lensRef = useRef<HTMLDivElement>(null);
-  const LENS_SIZE = 160;
-  const ZOOM = 2;
-
-  const onMouseMove = useCallback((e: React.MouseEvent) => {
-    if (!containerRef.current || !imgRef.current || !lensRef.current) return;
-    const rect = imgRef.current.getBoundingClientRect();
-    const x = e.clientX - rect.left;
-    const y = e.clientY - rect.top;
-
-    if (x < 0 || y < 0 || x > rect.width || y > rect.height) {
-      lensRef.current.style.opacity = '0';
-      return;
-    }
-
-    const containerRect = containerRef.current.getBoundingClientRect();
-    const lensX = e.clientX - containerRect.left - LENS_SIZE / 2;
-    const lensY = e.clientY - containerRect.top - LENS_SIZE / 2;
-    const bgX = (x / rect.width) * 100;
-    const bgY = (y / rect.height) * 100;
-
-    const lens = lensRef.current;
-    lens.style.opacity = '1';
-    lens.style.left = `${lensX}px`;
-    lens.style.top = `${lensY}px`;
-    lens.style.backgroundPosition = `${bgX}% ${bgY}%`;
-  }, []);
-
-  const onMouseLeave = useCallback(() => {
-    if (lensRef.current) lensRef.current.style.opacity = '0';
-  }, []);
-
-  return (
-    <motion.div
-      initial={{ opacity: 0, y: 30 }}
-      whileInView={{ opacity: 1, y: 0 }}
-      viewport={{ once: true }}
-      transition={{ duration: 0.8, ease: [0.22, 1, 0.36, 1] }}
-      className="group rounded-2xl overflow-hidden relative"
-      style={{
-        background: 'linear-gradient(135deg, rgba(212,165,70,0.08) 0%, rgba(15,15,20,0.9) 40%, rgba(15,15,20,0.95) 100%)',
-        padding: '1px',
-      }}>
-      {stamp && <EvidenceStamp label={stamp} />}
-      <div ref={containerRef} className="rounded-2xl overflow-hidden" style={{ backgroundColor: '#0c0c10' }}>
-        <div className="flex items-center gap-2 px-5 py-3" style={{ backgroundColor: 'rgba(255,255,255,0.02)' }}>
-          <div className="flex gap-1.5">
-            <div className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: '#ff5f5730' }} />
-            <div className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: '#ffbd2e25' }} />
-            <div className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: '#28c94025' }} />
-          </div>
-          <div className="flex-1 mx-6">
-            <div className="h-5 rounded-lg max-w-xs" style={{ backgroundColor: 'rgba(255,255,255,0.03)' }} />
-          </div>
-        </div>
-        <div className="relative overflow-hidden"
-          onMouseMove={onMouseMove}
-          onMouseLeave={onMouseLeave}
-          style={{ cursor: 'none' }}>
-          <img ref={imgRef} src={src} alt={alt} loading="lazy"
-            className="w-full block transition-transform duration-700 group-hover:scale-[1.005]" />
-
-          <div ref={lensRef}
-            className="absolute pointer-events-none z-30"
-            style={{
-              width: LENS_SIZE,
-              height: LENS_SIZE,
-              borderRadius: '50%',
-              border: `2px solid ${GOLD}50`,
-              boxShadow: `0 0 30px rgba(212,165,70,0.15), 0 0 60px rgba(0,0,0,0.6), inset 0 0 20px rgba(0,0,0,0.3)`,
-              backgroundImage: `url(${src})`,
-              backgroundSize: `${ZOOM * 100}% ${ZOOM * 100}%`,
-              backgroundRepeat: 'no-repeat',
-              opacity: 0,
-              transition: 'opacity 0.15s ease',
-              willChange: 'left, top, background-position',
-            }}>
-            <div className="absolute inset-0 rounded-full"
-              style={{
-                background: 'linear-gradient(135deg, rgba(255,255,255,0.08) 0%, transparent 50%, rgba(0,0,0,0.15) 100%)',
-              }} />
-            <div className="absolute top-1/2 left-0 right-0 h-[0.5px] -translate-y-1/2"
-              style={{ backgroundColor: `${GOLD}20` }} />
-            <div className="absolute left-1/2 top-0 bottom-0 w-[0.5px] -translate-x-1/2"
-              style={{ backgroundColor: `${GOLD}20` }} />
-          </div>
-
-          <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-700 pointer-events-none"
-            style={{ boxShadow: `inset 0 0 100px ${GOLD}08` }} />
-        </div>
-      </div>
-    </motion.div>
-  );
-}
-
 /* ═══════════════════ BUTTONS ═══════════════════ */
 function GoldButton({ children, onClick, size = 'lg' }: { children: React.ReactNode; onClick: () => void; size?: 'lg' | 'sm' }) {
   return (
@@ -455,7 +232,7 @@ function GoldButton({ children, onClick, size = 'lg' }: { children: React.ReactN
         whileTap={{ scale: 0.97 }}
         className={`relative overflow-hidden font-bold uppercase tracking-wider group
           ${size === 'lg' ? 'px-10 py-4 text-sm' : 'px-6 py-3 text-xs'}`}
-        style={{ backgroundColor: GOLD, color: '#080808', border: `1px solid ${GOLD}`, cursor: 'none' }}>
+        style={{ backgroundColor: GOLD, color: '#080808', border: `1px solid ${GOLD}` }}>
         <span className="absolute top-0 left-[-120%] w-[60%] h-full transition-all duration-700 ease-in-out group-hover:left-[150%] pointer-events-none"
           style={{ background: 'linear-gradient(to right, transparent, rgba(255,255,255,0.7), transparent)', transform: 'skewX(-25deg)' }} />
         <span className="relative">{children}</span>
@@ -470,7 +247,7 @@ function GhostButton({ children, onClick }: { children: React.ReactNode; onClick
       <motion.button onClick={onClick}
         whileHover={{ scale: 1.03 }} whileTap={{ scale: 0.97 }}
         className="px-8 py-4 text-sm font-bold uppercase tracking-wider border transition-all duration-300 hover:border-[#d4a546] hover:text-[#d4a546] hover:bg-[rgba(212,165,70,0.04)]"
-        style={{ borderColor: 'rgba(255,255,255,0.15)', color: '#c8c8d0', cursor: 'none' }}>
+        style={{ borderColor: 'rgba(255,255,255,0.15)', color: '#c8c8d0' }}>
         {children}
       </motion.button>
     </Magnetic>
@@ -532,7 +309,7 @@ function CrimeTape({ text = 'УЛИКИ · ДЕЛО №001 · СЕКРЕТНО' 
   );
 }
 
-/* ═══════════════════ HERO IMAGE — shifted right, seamless blend ═══════════════════ */
+/* ═══════════════════ HERO IMAGE ═══════════════════ */
 function HeroImage() {
   return (
     <div className="absolute top-0 bottom-0 hidden md:block"
@@ -553,70 +330,6 @@ function HeroImage() {
   );
 }
 
-/* ═══════════════════ FLASHLIGHT CURSOR — directional cone ═══════════════════ */
-function FlashlightCursor() {
-  const cursorX = useMotionValue(-100);
-  const cursorY = useMotionValue(-100);
-  const springX = useSpring(cursorX, { stiffness: 300, damping: 28 });
-  const springY = useSpring(cursorY, { stiffness: 300, damping: 28 });
-
-  useEffect(() => {
-    const onMove = (e: MouseEvent) => {
-      cursorX.set(e.clientX);
-      cursorY.set(e.clientY);
-    };
-    window.addEventListener('mousemove', onMove, { passive: true });
-    return () => window.removeEventListener('mousemove', onMove);
-  }, [cursorX, cursorY]);
-
-  return (
-    <>
-      <motion.div className="fixed top-0 left-0 z-[9998] pointer-events-none hidden lg:block"
-        style={{
-          x: springX, y: springY,
-          translateX: '-50%', translateY: '-50%',
-          width: 650, height: 650,
-          background: 'radial-gradient(ellipse 38% 42% at 50% 48%, rgba(255,235,180,0.09) 0%, rgba(212,165,70,0.06) 20%, rgba(212,165,70,0.025) 40%, rgba(212,165,70,0.008) 60%, transparent 80%)',
-        }} />
-      <motion.div className="fixed top-0 left-0 z-[9998] pointer-events-none hidden lg:block"
-        style={{
-          x: springX, y: springY,
-          translateX: '-50%', translateY: '-50%',
-          width: 300, height: 300,
-          background: 'radial-gradient(ellipse 50% 55% at 50% 50%, rgba(255,240,200,0.08) 0%, rgba(212,165,70,0.04) 35%, transparent 70%)',
-        }} />
-      <motion.div className="fixed top-0 left-0 z-[9998] pointer-events-none hidden lg:block"
-        style={{
-          x: springX, y: springY,
-          translateX: '-50%', translateY: '-50%',
-          width: 120, height: 120,
-          background: 'radial-gradient(circle, rgba(255,245,215,0.1) 0%, rgba(255,235,180,0.05) 40%, transparent 70%)',
-        }} />
-      <motion.div className="fixed top-0 left-0 z-[10000] pointer-events-none hidden lg:block"
-        style={{ x: springX, y: springY, translateX: '-50%', translateY: '-50%' }}>
-        <motion.div className="rounded-full"
-          style={{ width: 10, height: 10, border: `1.5px solid ${GOLD}50`, backgroundColor: `${GOLD}08` }}
-          animate={{ scale: [1, 1.15, 1] }}
-          transition={{ duration: 2.5, repeat: Infinity, ease: 'easeInOut' }} />
-        <div className="absolute -translate-x-1/2 -translate-y-1/2 top-1/2 left-1/2">
-          <div className="absolute w-[1px] h-4 -top-6 left-1/2 -translate-x-1/2" style={{ background: `linear-gradient(to bottom, transparent, ${GOLD}30)` }} />
-          <div className="absolute w-[1px] h-4 -bottom-[-3px] left-1/2 -translate-x-1/2" style={{ background: `linear-gradient(to top, transparent, ${GOLD}30)` }} />
-          <div className="absolute h-[1px] w-4 top-1/2 -left-6 -translate-y-1/2" style={{ background: `linear-gradient(to right, transparent, ${GOLD}30)` }} />
-          <div className="absolute h-[1px] w-4 top-1/2 -right-[-3px] -translate-y-1/2" style={{ background: `linear-gradient(to left, transparent, ${GOLD}30)` }} />
-        </div>
-      </motion.div>
-    </>
-  );
-}
-
-/* ═══════════════════ SCAN LINE ═══════════════════ */
-function ScanLine() {
-  return (
-    <div className="absolute inset-0 pointer-events-none overflow-hidden z-30 opacity-[0.015]">
-      <div className="scan-line absolute left-0 right-0 h-[1px]" style={{ backgroundColor: GOLD }} />
-    </div>
-  );
-}
 /* ════════════════════════════════════════════════
    MAIN
    ════════════════════════════════════════════════ */
@@ -642,10 +355,7 @@ export default function PublicLandingPage() {
   return (
     <div className="min-h-screen text-gray-200 overflow-x-hidden relative" style={{ background: DARK }}>
 
-      <FilmGrain />
       <CaseProgress />
-      <FlashlightCursor />
-      <DetectiveScrollObjects />
 
       {/* ═══════ HERO ═══════ */}
       <section className="relative min-h-screen flex items-center overflow-hidden">
@@ -663,10 +373,6 @@ export default function PublicLandingPage() {
           <div className="absolute inset-0 bg-[radial-gradient(circle_at_25%_50%,_rgba(160,115,40,0.04)_0%,_transparent_40%)]" />
           <div className="absolute inset-0 bg-[radial-gradient(circle_at_70%_30%,_rgba(160,115,40,0.05)_0%,_transparent_50%)]" />
           <div className="absolute inset-0 bg-[radial-gradient(ellipse_80%_50%_at_50%_100%,_rgba(10,8,4,0.8)_0%,_transparent_60%)]" />
-
-          <SmokeParticles />
-          <FloatingDust />
-          <ScanLine />
         </div>
 
         <div className="relative z-10 max-w-7xl mx-auto px-6 sm:px-10 w-full">
@@ -688,7 +394,7 @@ export default function PublicLandingPage() {
                 initial={{ opacity: 0, y: 50, rotateX: 30 }}
                 animate={{ opacity: 1, y: 0, rotateX: 0 }}
                 transition={{ duration: 1.2, delay: 0.5, ease: [0.22, 1, 0.36, 1] }}
-                className="block text-[3.5rem] sm:text-[4.5rem] md:text-[5.5rem] lg:text-[6.5rem] leading-[0.88] tracking-tight"
+                className="block leading-[0.88] tracking-tight hero-title-main"
                 style={{ fontFamily: "'Playfair Display', serif", color: '#e8e6e3',
                   textShadow: '0 4px 30px rgba(0,0,0,0.6)' }}>
                 СТАНЬ
@@ -697,7 +403,7 @@ export default function PublicLandingPage() {
                 initial={{ opacity: 0, y: 50, rotateX: 30 }}
                 animate={{ opacity: 1, y: 0, rotateX: 0 }}
                 transition={{ duration: 1.2, delay: 0.7, ease: [0.22, 1, 0.36, 1] }}
-                className="block text-[3rem] sm:text-[4rem] md:text-[5rem] lg:text-[5.875rem] leading-[0.88] tracking-tight mt-1"
+                className="block leading-[0.88] tracking-tight mt-1 hero-title-sub"
                 style={{ fontFamily: "'Playfair Display', serif",
                   background: `linear-gradient(135deg, ${GOLD_BRIGHT} 0%, ${GOLD} 50%, ${GOLD_DIM} 100%)`,
                   WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>
@@ -795,7 +501,7 @@ export default function PublicLandingPage() {
             <motion.button onClick={goAuth}
               whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.97 }}
               className="group px-6 py-3 text-xs font-bold uppercase tracking-widest border transition-all duration-400 hover:bg-[rgba(212,165,70,0.06)] hover:border-[#d4a546] hover:text-[#d4a546] hover:shadow-[0_0_30px_rgba(212,165,70,0.08)]"
-              style={{ borderColor: `${GOLD}35`, color: GOLD_DIM, cursor: 'none' }}>
+              style={{ borderColor: `${GOLD}35`, color: GOLD_DIM }}>
               Попробовать бесплатно →
             </motion.button>
           </Magnetic>
@@ -804,7 +510,7 @@ export default function PublicLandingPage() {
 
       <CrimeTape text="ДОСКА УЛИК · ДЕДУКЦИЯ · АНАЛИЗ" />
 
-      {/* ═══════ BOARD — with magnifier ═══════ */}
+      {/* ═══════ BOARD ═══════ */}
       <section className="relative py-24 sm:py-32 px-6">
         <div className="absolute inset-0 bg-[radial-gradient(ellipse_50%_40%_at_20%_50%,_rgba(212,165,70,0.02)_0%,_transparent_60%)]" />
         <div className="max-w-6xl mx-auto relative">
@@ -828,7 +534,7 @@ export default function PublicLandingPage() {
             </div>
           </SR>
           <SR delay={0.25} direction="scale">
-            <MagnifierFrame src={`${R2}/doska.png`} alt="Доска улик" stamp="ВЕЩДОК №3" />
+            <MonitorFrame src={`${R2}/doska.png`} alt="Доска улик" stamp="ВЕЩДОК №3" />
           </SR>
         </div>
       </section>
@@ -871,7 +577,7 @@ export default function PublicLandingPage() {
                   whileHover={{ y: -8, borderColor: step.accent + '40' }}
                   transition={{ duration: 0.35 }}
                   className="relative rounded-xl border p-6 sm:p-7 h-full group step-card"
-                  style={{ borderColor: 'rgba(255,255,255,0.05)', backgroundColor: 'rgba(12,12,16,0.5)', cursor: 'none' }}>
+                  style={{ borderColor: 'rgba(255,255,255,0.05)', backgroundColor: 'rgba(12,12,16,0.5)' }}>
                   <div className="absolute inset-0 rounded-xl opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none"
                     style={{ background: `radial-gradient(circle at 50% 0%, ${step.accent}0c 0%, transparent 70%)` }} />
                   <span className="text-[11px] font-bold tracking-[0.3em] block mb-5"
@@ -1022,7 +728,7 @@ export default function PublicLandingPage() {
             <GoldButton onClick={goAuth}>Начать расследование</GoldButton>
             <p className="mt-8 text-sm" style={{ color: '#3a3a3a' }}>
               Уже есть аккаунт?{' '}
-              <button onClick={goAuth} className="underline underline-offset-2 transition-colors hover:text-gray-400" style={{ cursor: 'none' }}>Войти</button>
+              <button onClick={goAuth} className="underline underline-offset-2 transition-colors hover:text-gray-400">Войти</button>
             </p>
           </div>
         </SR>
@@ -1048,49 +754,12 @@ export default function PublicLandingPage() {
       <style>{`
         @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500&family=Playfair+Display:ital,wght@0,400;0,700;0,900;1,400&family=Source+Sans+3:wght@200;300;400;600;700&display=swap');
 
-        @keyframes grain {
-          0%, 100% { transform: translate(0, 0); }
-          10% { transform: translate(-5%, -10%); }
-          20% { transform: translate(-15%, 5%); }
-          30% { transform: translate(7%, -25%); }
-          40% { transform: translate(-5%, 25%); }
-          50% { transform: translate(-15%, 10%); }
-          60% { transform: translate(15%, 0%); }
-          70% { transform: translate(0%, 15%); }
-          80% { transform: translate(3%, 35%); }
-          90% { transform: translate(-10%, 10%); }
-        }
-        .film-grain {
-          width: 300%; height: 300%;
-          background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='1'/%3E%3C/svg%3E");
-          animation: grain 0.5s steps(6) infinite;
-        }
-
         @keyframes marquee-slide { 0% { transform: translateX(0); } 100% { transform: translateX(-50%); } }
         .marquee-track {
           animation: marquee-slide 60s linear infinite;
           will-change: transform;
         }
         .marquee-track:hover { animation-play-state: paused; }
-
-        @keyframes dust-drift {
-          0%, 100% { transform: translateY(0) translateX(0); opacity: inherit; }
-          25% { transform: translateY(-40px) translateX(15px); }
-          50% { transform: translateY(-80px) translateX(-5px); opacity: 0.35; }
-          75% { transform: translateY(-40px) translateX(-15px); }
-        }
-        .dust-float { animation: dust-drift ease-in-out infinite; }
-
-        @keyframes smoke-move {
-          0% { transform: translate(0, 0) scale(1); opacity: inherit; }
-          33% { transform: translate(30px, -40px) scale(1.2); }
-          66% { transform: translate(-20px, -80px) scale(0.8); opacity: 0.02; }
-          100% { transform: translate(10px, -120px) scale(1.1); opacity: 0; }
-        }
-        .smoke-drift { animation: smoke-move ease-in-out infinite; }
-
-        @keyframes scan { 0% { top: -2%; } 100% { top: 102%; } }
-        .scan-line { animation: scan 8s linear infinite; }
 
         .classified-glow { transition: all 0.4s ease; }
         .classified-glow:hover {
@@ -1124,14 +793,28 @@ export default function PublicLandingPage() {
           backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px);
         }
 
+        /* Hero title sizes: reduced by ~10px per breakpoint */
+        .hero-title-main { font-size: 2.875rem; }
+        .hero-title-sub { font-size: 2.375rem; }
+        @media (min-width: 640px) {
+          .hero-title-main { font-size: 3.875rem; }
+          .hero-title-sub { font-size: 3.375rem; }
+        }
+        @media (min-width: 768px) {
+          .hero-title-main { font-size: 4.875rem; }
+          .hero-title-sub { font-size: 4.375rem; }
+        }
+        @media (min-width: 1024px) {
+          .hero-title-main { font-size: 5.875rem; }
+          .hero-title-sub { font-size: 5.25rem; }
+        }
+
         ::-webkit-scrollbar { width: 6px; }
         ::-webkit-scrollbar-track { background: #07070a; }
         ::-webkit-scrollbar-thumb { background: #1a1a1a; border-radius: 3px; }
         ::-webkit-scrollbar-thumb:hover { background: #2a2a2a; }
         ::selection { background: rgba(212,165,70,0.2); color: #f0d060; }
         html { scroll-behavior: smooth; }
-
-        @media (min-width: 1024px) { * { cursor: none !important; } }
       `}</style>
     </div>
   );

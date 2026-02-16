@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { motion, useScroll, useTransform, useInView, AnimatePresence } from 'framer-motion';
+import { motion, useInView, AnimatePresence } from 'framer-motion';
 import { useAuthStore } from '../stores/authStore';
 import { ChevronDown, Search, MessageSquare, Network, Scale } from 'lucide-react';
 
@@ -53,23 +53,24 @@ function AnimatedCounter({ target, suffix = '', duration = 2000 }: { target: num
   return <span ref={ref}>{value.toLocaleString()}{suffix}</span>;
 }
 
-/* ═══════════════════ PARTICLES ═══════════════════ */
+/* ═══════════════════ PARTICLES (CSS-only for performance) ═══════════════════ */
 function FloatingParticles() {
   const p = useRef(
-    Array.from({ length: 25 }, (_, i) => ({
+    Array.from({ length: 12 }, (_, i) => ({
       id: i, x: Math.random() * 100, y: Math.random() * 100,
-      size: Math.random() * 2 + 0.5, dur: Math.random() * 25 + 15,
-      delay: Math.random() * 12, opacity: Math.random() * 0.2 + 0.04,
+      size: Math.random() * 2 + 0.5, dur: Math.random() * 25 + 18,
+      delay: Math.random() * 12, opacity: Math.random() * 0.18 + 0.04,
     }))
   ).current;
   return (
     <div className="absolute inset-0 overflow-hidden pointer-events-none">
       {p.map((d) => (
-        <motion.div key={d.id} className="absolute rounded-full"
-          style={{ left: `${d.x}%`, top: `${d.y}%`, width: d.size, height: d.size, backgroundColor: GOLD, opacity: d.opacity }}
-          animate={{ y: [0, -80, 0], x: [0, Math.random() * 20 - 10, 0], opacity: [d.opacity, d.opacity * 2.5, d.opacity] }}
-          transition={{ duration: d.dur, repeat: Infinity, delay: d.delay, ease: 'easeInOut' }}
-        />
+        <div key={d.id} className="absolute rounded-full particle-float"
+          style={{
+            left: `${d.x}%`, top: `${d.y}%`, width: d.size, height: d.size,
+            backgroundColor: GOLD, opacity: d.opacity,
+            animationDuration: `${d.dur}s`, animationDelay: `${d.delay}s`,
+          }} />
       ))}
     </div>
   );
@@ -121,7 +122,7 @@ function EmotionCycler() {
 /* ═══════════════════ FAQ ═══════════════════ */
 const FAQ = [
   { q: 'Это бесплатно?', a: 'Первое дело — полностью бесплатно. Вы можете пройти его целиком, включая все допросы, осмотр локаций и финальное обвинение. Дополнительные дела доступны после покупки.' },
-  { q: 'Нужен ли микрофон?', a: 'Нет. Вы общаетесь с подозреваемыми через текстовый ввод — печатаете вопросы и получаете ответы в реальном времени.' },
+
   { q: 'Сколько длится одно дело?', a: 'В среднем от 40 минут до 1,5 часов — зависит от того, насколько тщательно вы изучаете улики и допрашиваете подозреваемых.' },
   { q: 'Как работает AI в игре?', a: 'Каждый подозреваемый управляется продвинутым AI с уникальной личностью, секретами и алиби. Он реагирует на ваши вопросы и предъявленные улики, может нервничать, злиться и быть пойман на лжи.' },
   { q: 'Можно ли переиграть дело?', a: 'Да. AI генерирует уникальные ответы каждый раз, так что диалоги не будут повторяться.' },
@@ -239,11 +240,14 @@ function LocationsMarquee() {
 export default function PublicLandingPage() {
   const { isAuthenticated } = useAuthStore();
   const navigate = useNavigate();
-  const { scrollYProgress } = useScroll();
   const [openFaq, setOpenFaq] = useState<number | null>(null);
+  const [scrolled, setScrolled] = useState(false);
 
-  const heroOpacity = useTransform(scrollYProgress, [0, 0.12], [1, 0]);
-  const heroScale = useTransform(scrollYProgress, [0, 0.12], [1, 1.06]);
+  useEffect(() => {
+    const onScroll = () => setScrolled(window.scrollY > 80);
+    window.addEventListener('scroll', onScroll, { passive: true });
+    return () => window.removeEventListener('scroll', onScroll);
+  }, []);
 
   useEffect(() => { if (isAuthenticated) navigate('/cases', { replace: true }); }, [isAuthenticated, navigate]);
 
@@ -257,12 +261,12 @@ export default function PublicLandingPage() {
 
       {/* ═══════ HERO ═══════ */}
       <section className="relative min-h-screen flex items-center overflow-hidden">
-        <motion.div className="absolute inset-0" style={{ opacity: heroOpacity, scale: heroScale }}>
+        <div className="absolute inset-0" style={{ willChange: 'auto', transform: 'translateZ(0)' }}>
           {/* Detective photo — cinematic full bleed */}
           <div className="absolute inset-0">
             <img src={`${R2}/photo_2026-02-16_12-23-44.jpg`} alt=""
-              className="absolute inset-0 w-full h-full object-cover object-[center_15%]"
-              style={{ filter: 'contrast(1.15) saturate(0.65) brightness(0.5)' }} />
+              className="absolute inset-0 w-full h-full object-cover"
+              style={{ filter: 'contrast(1.15) saturate(0.65) brightness(0.5)', objectPosition: '85% 15%', willChange: 'auto' }} />
 
             {/* Cinematic color grade — warm amber tones matching the photo */}
             <div className="absolute inset-0"
@@ -282,14 +286,14 @@ export default function PublicLandingPage() {
           </div>
 
           {/* Warm ambient glow behind detective */}
-          <div className="absolute inset-0 bg-[radial-gradient(circle_at_65%_45%,_rgba(140,100,35,0.07)_0%,_transparent_55%)]" />
+          <div className="absolute inset-0 bg-[radial-gradient(circle_at_80%_40%,_rgba(140,100,35,0.07)_0%,_transparent_55%)]" />
 
           <FloatingParticles />
 
-          {/* Film grain */}
-          <div className="absolute inset-0 opacity-[0.025] mix-blend-overlay"
-            style={{ backgroundImage: `url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E")` }} />
-        </motion.div>
+          {/* Film grain — lightweight CSS noise */}
+          <div className="absolute inset-0 opacity-[0.02]"
+            style={{ backgroundImage: 'url("data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAADIAAAAyBAMAAADsEZWCAAAAElBMVEUAAAD///////////////////8+Mn5OAAAABnRSTlMDCBEaJzP/8kwaAAAASklEQVQ4y2NgGAWjYBSQD5hYGBj+M7AwMDAz/GdgYGT4z8zAwMr4n4GBmfE/EwMDCxMDAxsLAwM7MwMDBwsDAycrAwMXOwMDAACdDwz/clp/ygAAAABJRU5ErkJggg==")' }} />
+        </div>
 
         {/* Content */}
         <div className="relative z-10 max-w-7xl mx-auto px-6 sm:px-10 w-full">
@@ -362,7 +366,8 @@ export default function PublicLandingPage() {
 
         {/* Scroll */}
         <motion.div className="absolute bottom-8 left-1/2 -translate-x-1/2 z-10 flex flex-col items-center gap-2"
-          animate={{ y: [0, 8, 0] }} transition={{ duration: 2.5, repeat: Infinity, ease: 'easeInOut' }}>
+          animate={{ y: [0, 8, 0], opacity: scrolled ? 0 : 1 }}
+          transition={{ y: { duration: 2.5, repeat: Infinity, ease: 'easeInOut' }, opacity: { duration: 0.4 } }}>
           <span className="text-[9px] uppercase tracking-[0.25em]"
             style={{ color: '#444', fontFamily: "'JetBrains Mono', monospace" }}>Прокрутите</span>
           <div className="w-5 h-8 rounded-full border flex items-start justify-center p-1" style={{ borderColor: '#2a2a2a' }}>
@@ -645,6 +650,14 @@ export default function PublicLandingPage() {
         }
         .marquee-track {
           animation: marquee-slide 60s linear infinite;
+        }
+
+        @keyframes particle-drift {
+          0%, 100% { transform: translateY(0) translateX(0); opacity: inherit; }
+          50% { transform: translateY(-70px) translateX(10px); opacity: 0.3; }
+        }
+        .particle-float {
+          animation: particle-drift ease-in-out infinite;
         }
 
         .section-label {

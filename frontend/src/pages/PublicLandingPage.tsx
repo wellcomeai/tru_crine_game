@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState, useCallback, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { motion, useInView, AnimatePresence, useScroll, useSpring, useMotionValue } from 'framer-motion';
+import { motion, useInView, AnimatePresence, useScroll, useSpring, useMotionValue, useTransform } from 'framer-motion';
 import { useAuthStore } from '../stores/authStore';
 import { ChevronDown, Search, MessageSquare, Network, Scale, Fingerprint } from 'lucide-react';
 
@@ -78,6 +78,62 @@ function AnimatedCounter({ target, suffix = '', duration = 2000 }: { target: num
     return () => clearInterval(t);
   }, [inView, target, duration]);
   return <span ref={ref}>{value.toLocaleString()}{suffix}</span>;
+}
+
+/* ═══════════════════ FLASHLIGHT CURSOR ═══════════════════ */
+function FlashlightCursor() {
+  const cursorX = useMotionValue(-100);
+  const cursorY = useMotionValue(-100);
+  const springX = useSpring(cursorX, { stiffness: 300, damping: 28 });
+  const springY = useSpring(cursorY, { stiffness: 300, damping: 28 });
+
+  useEffect(() => {
+    const onMove = (e: MouseEvent) => {
+      cursorX.set(e.clientX);
+      cursorY.set(e.clientY);
+    };
+    window.addEventListener('mousemove', onMove, { passive: true });
+    return () => window.removeEventListener('mousemove', onMove);
+  }, [cursorX, cursorY]);
+
+  return (
+    <>
+      <motion.div className="fixed top-0 left-0 z-[9998] pointer-events-none hidden lg:block"
+        style={{
+          x: springX, y: springY,
+          translateX: '-50%', translateY: '-50%',
+          width: 650, height: 650,
+          background: 'radial-gradient(ellipse 38% 42% at 50% 48%, rgba(255,235,180,0.09) 0%, rgba(212,165,70,0.06) 20%, rgba(212,165,70,0.025) 40%, rgba(212,165,70,0.008) 60%, transparent 80%)',
+        }} />
+      <motion.div className="fixed top-0 left-0 z-[9998] pointer-events-none hidden lg:block"
+        style={{
+          x: springX, y: springY,
+          translateX: '-50%', translateY: '-50%',
+          width: 300, height: 300,
+          background: 'radial-gradient(ellipse 50% 55% at 50% 50%, rgba(255,240,200,0.08) 0%, rgba(212,165,70,0.04) 35%, transparent 70%)',
+        }} />
+      <motion.div className="fixed top-0 left-0 z-[9998] pointer-events-none hidden lg:block"
+        style={{
+          x: springX, y: springY,
+          translateX: '-50%', translateY: '-50%',
+          width: 120, height: 120,
+          background: 'radial-gradient(circle, rgba(255,245,215,0.1) 0%, rgba(255,235,180,0.05) 40%, transparent 70%)',
+        }} />
+      <motion.div className="fixed top-0 left-0 z-[10000] pointer-events-none hidden lg:block"
+        style={{ x: springX, y: springY, translateX: '-50%', translateY: '-50%' }}>
+        <motion.div className="rounded-full"
+          style={{ width: 10, height: 10, border: `1.5px solid ${GOLD}50`, backgroundColor: `${GOLD}08` }}
+          animate={{ scale: [1, 1.15, 1] }}
+          transition={{ duration: 2.5, repeat: Infinity, ease: 'easeInOut' }} />
+        <div className="absolute -translate-x-1/2 -translate-y-1/2 top-1/2 left-1/2">
+          <div className="absolute w-[1px] h-4 -top-6 left-1/2 -translate-x-1/2" style={{ background: `linear-gradient(to bottom, transparent, ${GOLD}30)` }} />
+          <div className="absolute w-[1px] h-4 -bottom-[-3px] left-1/2 -translate-x-1/2" style={{ background: `linear-gradient(to top, transparent, ${GOLD}30)` }} />
+          <div className="absolute h-[1px] w-4 top-1/2 -left-6 -translate-y-1/2" style={{ background: `linear-gradient(to right, transparent, ${GOLD}30)` }} />
+          <div className="absolute h-[1px] w-4 top-1/2 -right-[-3px] -translate-y-1/2" style={{ background: `linear-gradient(to left, transparent, ${GOLD}30)` }} />
+        </div>
+      </motion.div>
+    </>
+  );
 }
 
 /* ═══════════════════ SCROLL REVEAL ═══════════════════ */
@@ -232,7 +288,7 @@ function GoldButton({ children, onClick, size = 'lg' }: { children: React.ReactN
         whileTap={{ scale: 0.97 }}
         className={`relative overflow-hidden font-bold uppercase tracking-wider group
           ${size === 'lg' ? 'px-10 py-4 text-sm' : 'px-6 py-3 text-xs'}`}
-        style={{ backgroundColor: GOLD, color: '#080808', border: `1px solid ${GOLD}` }}>
+        style={{ backgroundColor: GOLD, color: '#080808', border: `1px solid ${GOLD}`, cursor: 'none' }}>
         <span className="absolute top-0 left-[-120%] w-[60%] h-full transition-all duration-700 ease-in-out group-hover:left-[150%] pointer-events-none"
           style={{ background: 'linear-gradient(to right, transparent, rgba(255,255,255,0.7), transparent)', transform: 'skewX(-25deg)' }} />
         <span className="relative">{children}</span>
@@ -247,7 +303,7 @@ function GhostButton({ children, onClick }: { children: React.ReactNode; onClick
       <motion.button onClick={onClick}
         whileHover={{ scale: 1.03 }} whileTap={{ scale: 0.97 }}
         className="px-8 py-4 text-sm font-bold uppercase tracking-wider border transition-all duration-300 hover:border-[#d4a546] hover:text-[#d4a546] hover:bg-[rgba(212,165,70,0.04)]"
-        style={{ borderColor: 'rgba(255,255,255,0.15)', color: '#c8c8d0' }}>
+        style={{ borderColor: 'rgba(255,255,255,0.15)', color: '#c8c8d0', cursor: 'none' }}>
         {children}
       </motion.button>
     </Magnetic>
@@ -309,27 +365,6 @@ function CrimeTape({ text = 'УЛИКИ · ДЕЛО №001 · СЕКРЕТНО' 
   );
 }
 
-/* ═══════════════════ HERO IMAGE ═══════════════════ */
-function HeroImage() {
-  return (
-    <div className="absolute top-0 bottom-0 hidden md:block"
-      style={{ right: '-20px', width: '55%' }}>
-      <img src={`${R2}/photo_2026-02-16_12-23-44.jpg`} alt=""
-        className="absolute inset-0 w-full h-full object-cover"
-        style={{ filter: 'contrast(1.15) saturate(0.7) brightness(0.55)', objectPosition: '80% 20%' }} />
-      <div className="absolute inset-0"
-        style={{ background: `linear-gradient(to right, ${DARK} 0%, ${DARK} 5%, rgba(7,7,10,0.97) 12%, rgba(7,7,10,0.88) 22%, rgba(7,7,10,0.65) 35%, rgba(7,7,10,0.35) 48%, rgba(7,7,10,0.12) 62%, transparent 80%)` }} />
-      <div className="absolute bottom-0 left-0 right-0 h-[40%]"
-        style={{ background: `linear-gradient(to top, ${DARK} 0%, transparent 100%)` }} />
-      <div className="absolute top-0 left-0 right-0 h-32"
-        style={{ background: `linear-gradient(to bottom, ${DARK} 0%, transparent 100%)` }} />
-      <div className="absolute inset-0"
-        style={{ background: 'linear-gradient(180deg, rgba(15,12,8,0.3) 0%, rgba(7,7,10,0.15) 50%, rgba(7,7,10,0.4) 100%)' }} />
-      <div className="absolute inset-0" style={{ boxShadow: 'inset 0 0 150px rgba(0,0,0,0.5)' }} />
-    </div>
-  );
-}
-
 /* ════════════════════════════════════════════════
    MAIN
    ════════════════════════════════════════════════ */
@@ -338,6 +373,15 @@ export default function PublicLandingPage() {
   const navigate = useNavigate();
   const [openFaq, setOpenFaq] = useState<number | null>(null);
   const [scrolled, setScrolled] = useState(false);
+
+  const heroRef = useRef(null);
+  const { scrollYProgress: heroProgress } = useScroll({
+    target: heroRef,
+    offset: ['start start', 'end start'],
+  });
+  const heroOpacity = useTransform(heroProgress, [0, 0.7, 1], [1, 1, 0]);
+  const heroScale = useTransform(heroProgress, [0, 1], [1, 1.05]);
+  const heroY = useTransform(heroProgress, [0, 1], [0, 80]);
 
   useEffect(() => {
     const onScroll = () => setScrolled(window.scrollY > 80);
@@ -356,27 +400,42 @@ export default function PublicLandingPage() {
     <div className="min-h-screen text-gray-200 overflow-x-hidden relative" style={{ background: DARK }}>
 
       <CaseProgress />
+      <FlashlightCursor />
 
-      {/* ═══════ HERO ═══════ */}
-      <section className="relative min-h-screen flex items-center overflow-hidden">
-        <div className="absolute inset-0">
-          <div className="absolute inset-0" style={{ background: DARK }} />
-          <HeroImage />
+      {/* ═══════ HERO — fullscreen image ═══════ */}
+      <section ref={heroRef} className="relative min-h-screen flex items-center overflow-hidden">
+        {/* Parallax background image */}
+        <motion.div className="absolute inset-0" style={{ scale: heroScale, y: heroY }}>
+          <img
+            src={`${R2}/IMG_4874.PNG`}
+            alt=""
+            className="absolute inset-0 w-full h-full object-cover"
+            style={{ filter: 'contrast(1.1) saturate(0.75) brightness(0.5)', objectPosition: '70% center' }}
+          />
+          {/* Left darkness for text readability */}
+          <div className="absolute inset-0"
+            style={{ background: 'linear-gradient(to right, rgba(7,7,10,0.92) 0%, rgba(7,7,10,0.82) 25%, rgba(7,7,10,0.55) 45%, rgba(7,7,10,0.2) 60%, transparent 75%)' }} />
+          {/* Top vignette */}
+          <div className="absolute top-0 left-0 right-0 h-40"
+            style={{ background: `linear-gradient(to bottom, ${DARK} 0%, transparent 100%)` }} />
+          {/* Warm color overlay */}
+          <div className="absolute inset-0"
+            style={{ background: 'linear-gradient(180deg, rgba(15,12,8,0.25) 0%, rgba(7,7,10,0.1) 50%, rgba(7,7,10,0.35) 100%)' }} />
+          {/* Inner shadow for depth */}
+          <div className="absolute inset-0" style={{ boxShadow: 'inset 0 0 200px rgba(0,0,0,0.5)' }} />
+        </motion.div>
 
-          <div className="absolute inset-0 md:hidden">
-            <img src={`${R2}/photo_2026-02-16_12-23-44.jpg`} alt=""
-              className="absolute inset-0 w-full h-full object-cover"
-              style={{ filter: 'brightness(0.25) saturate(0.5)', objectPosition: 'center 20%' }} />
-            <div className="absolute inset-0" style={{ background: 'rgba(7,7,10,0.7)' }} />
-          </div>
+        {/* Bottom fade — smooth transition to next section */}
+        <div className="absolute bottom-0 left-0 right-0 z-20 pointer-events-none"
+          style={{ height: '35vh', background: `linear-gradient(to top, ${DARK} 0%, ${DARK}ee 15%, ${DARK}aa 35%, ${DARK}55 55%, ${DARK}22 75%, transparent 100%)` }} />
 
-          <div className="absolute inset-0 bg-[radial-gradient(circle_at_25%_50%,_rgba(160,115,40,0.04)_0%,_transparent_40%)]" />
-          <div className="absolute inset-0 bg-[radial-gradient(circle_at_70%_30%,_rgba(160,115,40,0.05)_0%,_transparent_50%)]" />
-          <div className="absolute inset-0 bg-[radial-gradient(ellipse_80%_50%_at_50%_100%,_rgba(10,8,4,0.8)_0%,_transparent_60%)]" />
-        </div>
+        {/* Radial ambient glows */}
+        <div className="absolute inset-0 bg-[radial-gradient(circle_at_20%_50%,_rgba(160,115,40,0.05)_0%,_transparent_40%)] pointer-events-none" />
+        <div className="absolute inset-0 bg-[radial-gradient(circle_at_75%_30%,_rgba(160,115,40,0.04)_0%,_transparent_50%)] pointer-events-none" />
 
-        <div className="relative z-10 max-w-7xl mx-auto px-6 sm:px-10 w-full">
-          <div className="max-w-xl lg:max-w-[600px]">
+        {/* Content with scroll opacity */}
+        <motion.div className="relative z-10 max-w-7xl mx-auto px-6 sm:px-10 w-full" style={{ opacity: heroOpacity }}>
+          <div className="max-w-xl lg:max-w-[580px]">
 
             <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.8, delay: 0.3 }} className="mb-8">
@@ -406,7 +465,9 @@ export default function PublicLandingPage() {
                 className="block leading-[0.88] tracking-tight mt-1 hero-title-sub"
                 style={{ fontFamily: "'Playfair Display', serif",
                   background: `linear-gradient(135deg, ${GOLD_BRIGHT} 0%, ${GOLD} 50%, ${GOLD_DIM} 100%)`,
-                  WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>
+                  WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent',
+                  filter: 'drop-shadow(0 4px 15px rgba(212,165,70,0.2))',
+                }}>
                 ДЕТЕКТИВОМ
               </motion.span>
             </motion.h1>
@@ -419,7 +480,8 @@ export default function PublicLandingPage() {
             <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}
               transition={{ delay: 0.9 }} className="mb-6 min-h-[2rem]">
               <p className="text-base sm:text-lg italic"
-                style={{ color: '#9a9a9a', fontWeight: 300, fontFamily: "'Playfair Display', serif" }}>
+                style={{ color: '#9a9a9a', fontWeight: 300, fontFamily: "'Playfair Display', serif",
+                  textShadow: '0 2px 10px rgba(0,0,0,0.5)' }}>
                 {typed}
                 {!tagDone && (
                   <motion.span animate={{ opacity: [1, 0] }} transition={{ duration: 0.5, repeat: Infinity }}
@@ -431,7 +493,8 @@ export default function PublicLandingPage() {
             <motion.p initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 2.5, duration: 0.6 }}
               className="text-[15px] sm:text-base mb-10 max-w-md leading-relaxed"
-              style={{ color: '#6e6e7a', fontWeight: 300, fontFamily: "'Source Sans 3', sans-serif" }}>
+              style={{ color: '#7a7a86', fontWeight: 300, fontFamily: "'Source Sans 3', sans-serif",
+                textShadow: '0 2px 8px rgba(0,0,0,0.4)' }}>
               Допрашивай AI-подозреваемых, собирай улики на интерактивной доске и раскрой дело, которое поставило полицию в тупик.
             </motion.p>
 
@@ -444,14 +507,14 @@ export default function PublicLandingPage() {
               </GhostButton>
             </motion.div>
           </div>
-        </div>
+        </motion.div>
 
-        <motion.div className="absolute bottom-8 left-1/2 -translate-x-1/2 z-10 flex flex-col items-center gap-2"
+        <motion.div className="absolute bottom-8 left-1/2 -translate-x-1/2 z-30 flex flex-col items-center gap-2"
           animate={{ y: [0, 8, 0], opacity: scrolled ? 0 : 1 }}
           transition={{ y: { duration: 2.5, repeat: Infinity, ease: 'easeInOut' }, opacity: { duration: 0.4 } }}>
           <span className="text-[9px] uppercase tracking-[0.25em]"
-            style={{ color: '#444', fontFamily: "'JetBrains Mono', monospace" }}>Прокрутите</span>
-          <div className="w-5 h-8 rounded-full border flex items-start justify-center p-1" style={{ borderColor: '#2a2a2a' }}>
+            style={{ color: '#555', fontFamily: "'JetBrains Mono', monospace" }}>Прокрутите</span>
+          <div className="w-5 h-8 rounded-full border flex items-start justify-center p-1" style={{ borderColor: '#333' }}>
             <motion.div className="w-1 h-1.5 rounded-full" style={{ backgroundColor: GOLD_DIM }}
               animate={{ y: [0, 12, 0] }} transition={{ duration: 2.5, repeat: Infinity, ease: 'easeInOut' }} />
           </div>
@@ -501,7 +564,7 @@ export default function PublicLandingPage() {
             <motion.button onClick={goAuth}
               whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.97 }}
               className="group px-6 py-3 text-xs font-bold uppercase tracking-widest border transition-all duration-400 hover:bg-[rgba(212,165,70,0.06)] hover:border-[#d4a546] hover:text-[#d4a546] hover:shadow-[0_0_30px_rgba(212,165,70,0.08)]"
-              style={{ borderColor: `${GOLD}35`, color: GOLD_DIM }}>
+              style={{ borderColor: `${GOLD}35`, color: GOLD_DIM, cursor: 'none' }}>
               Попробовать бесплатно →
             </motion.button>
           </Magnetic>
@@ -577,7 +640,7 @@ export default function PublicLandingPage() {
                   whileHover={{ y: -8, borderColor: step.accent + '40' }}
                   transition={{ duration: 0.35 }}
                   className="relative rounded-xl border p-6 sm:p-7 h-full group step-card"
-                  style={{ borderColor: 'rgba(255,255,255,0.05)', backgroundColor: 'rgba(12,12,16,0.5)' }}>
+                  style={{ borderColor: 'rgba(255,255,255,0.05)', backgroundColor: 'rgba(12,12,16,0.5)', cursor: 'none' }}>
                   <div className="absolute inset-0 rounded-xl opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none"
                     style={{ background: `radial-gradient(circle at 50% 0%, ${step.accent}0c 0%, transparent 70%)` }} />
                   <span className="text-[11px] font-bold tracking-[0.3em] block mb-5"
@@ -728,7 +791,7 @@ export default function PublicLandingPage() {
             <GoldButton onClick={goAuth}>Начать расследование</GoldButton>
             <p className="mt-8 text-sm" style={{ color: '#3a3a3a' }}>
               Уже есть аккаунт?{' '}
-              <button onClick={goAuth} className="underline underline-offset-2 transition-colors hover:text-gray-400">Войти</button>
+              <button onClick={goAuth} className="underline underline-offset-2 transition-colors hover:text-gray-400" style={{ cursor: 'none' }}>Войти</button>
             </p>
           </div>
         </SR>
@@ -793,7 +856,6 @@ export default function PublicLandingPage() {
           backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px);
         }
 
-        /* Hero title sizes: reduced by ~10px per breakpoint */
         .hero-title-main { font-size: 2.875rem; }
         .hero-title-sub { font-size: 2.375rem; }
         @media (min-width: 640px) {
@@ -815,6 +877,8 @@ export default function PublicLandingPage() {
         ::-webkit-scrollbar-thumb:hover { background: #2a2a2a; }
         ::selection { background: rgba(212,165,70,0.2); color: #f0d060; }
         html { scroll-behavior: smooth; }
+
+        @media (min-width: 1024px) { * { cursor: none !important; } }
       `}</style>
     </div>
   );

@@ -93,6 +93,13 @@ function EvidenceNode({ data }: { data: EvidenceNodeData }) {
           {data.type || 'улика'}
         </p>
 
+        {/* Description */}
+        {data.description && (
+          <p className="text-[10px] leading-snug text-[#444] mb-1 line-clamp-2">
+            {data.description}
+          </p>
+        )}
+
         {/* Importance stars */}
         <p className="text-[11px] text-[#c9a84c] leading-none mb-1">
           {stars}

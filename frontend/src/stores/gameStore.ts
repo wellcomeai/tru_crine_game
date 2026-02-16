@@ -17,9 +17,11 @@ interface GameStore {
   notifications: Notification[];
   activeTab: 'locations' | 'characters' | 'evidence';
   loading: boolean;
+  showAboutModal: boolean;
 
   setSessionId: (id: string) => void;
   setActiveTab: (tab: 'locations' | 'characters' | 'evidence') => void;
+  setShowAboutModal: (show: boolean) => void;
   startCase: (caseId: string) => Promise<string>;
   loadState: () => Promise<void>;
   loadLocations: () => Promise<void>;
@@ -50,9 +52,11 @@ export const useGameStore = create<GameStore>((set, get) => ({
   notifications: [],
   activeTab: 'locations',
   loading: false,
+  showAboutModal: false,
 
   setSessionId: (id: string) => set({ sessionId: id }),
   setActiveTab: (tab) => set({ activeTab: tab }),
+  setShowAboutModal: (show: boolean) => set({ showAboutModal: show }),
 
   startCase: async (caseId: string) => {
     const { data } = await api.post(`/cases/${caseId}/start`);

@@ -10,7 +10,7 @@ from app.config import settings
 from app.database import get_db
 from app.models import Case, GameSession, GameState, Character, User
 from app.models.case_purchase import CasePurchase
-from app.schemas.case import CaseListItem, CaseDetail, StartCaseResponse, PhaseSchema, UserSessionInfo
+from app.schemas.case import CaseListItem, CaseDetail, StartCaseResponse, PhaseSchema, UserSessionInfo, CaseCharacterPreview
 from app.services.auth_service import get_current_user
 
 ADMIN_EMAIL = "well96well@gmail.com"
@@ -105,6 +105,24 @@ async def get_case(case_id: UUID, db: AsyncSession = Depends(get_db)):
         for p in (case.phases or [])
     ]
 
+    # Fetch characters — public info only (no secrets, backstory, is_guilty, etc.)
+    chars_result = await db.execute(
+        select(Character)
+        .where(Character.case_id == case_id)
+        .order_by(Character.sort_order)
+    )
+    characters = [
+        CaseCharacterPreview(
+            name=c.name,
+            slug=c.slug,
+            occupation=c.occupation,
+            role=c.role,
+            avatar=c.avatar,
+            age=c.age,
+        )
+        for c in chars_result.scalars().all()
+    ]
+
     return CaseDetail(
         id=str(case.id),
         slug=case.slug,
@@ -115,6 +133,7 @@ async def get_case(case_id: UUID, db: AsyncSession = Depends(get_db)):
         cover_image=case.cover_image,
         is_published=case.is_published,
         phases=phases,
+        characters=characters,
     )
 
 

@@ -1,6 +1,7 @@
-import { X, Star, Clock, ChevronRight, ShoppingCart } from 'lucide-react';
+import { X, Star, Clock, ChevronRight, ShoppingCart, Users } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { getImageUrl } from '../../utils/helpers';
+import { getImageUrl, getInitials } from '../../utils/helpers';
+import { ROLE_LABELS } from '../../utils/constants';
 import type { Case } from '../../types';
 
 interface CasePreviewModalProps {
@@ -16,6 +17,14 @@ interface CasePreviewModalProps {
       id: string;
       name: string;
       description: string;
+    }>;
+    characters?: Array<{
+      name: string;
+      slug: string;
+      occupation: string | null;
+      role: string | null;
+      avatar: string | null;
+      age: number | null;
     }>;
   } | null;
   caseItem?: Case | null;
@@ -119,6 +128,66 @@ export default function CasePreviewModal({ isOpen, onClose, caseData, caseItem, 
                 {/* Description */}
                 {caseData.description && (
                   <p className="text-neutral-300 leading-relaxed mb-6">{caseData.description}</p>
+                )}
+
+                {/* Characters */}
+                {caseData.characters && caseData.characters.length > 0 && (
+                  <div className="mb-6">
+                    <h3 className="text-sm font-semibold text-neutral-500
+                                   uppercase tracking-wider mb-3
+                                   flex items-center gap-2">
+                      <Users size={14} className="text-amber-400" />
+                      Участники дела
+                    </h3>
+                    <div className="grid grid-cols-2 gap-2">
+                      {caseData.characters.map((char) => (
+                        <div
+                          key={char.slug}
+                          className="flex items-center gap-2.5 p-2
+                                     bg-neutral-800/40 rounded-lg
+                                     border border-neutral-700/20"
+                        >
+                          {/* Avatar */}
+                          {char.avatar ? (
+                            <img
+                              src={getImageUrl(char.avatar)}
+                              alt={char.name}
+                              className="w-8 h-8 rounded-full object-cover
+                                         border border-neutral-600/40 flex-shrink-0"
+                              onError={(e) => {
+                                (e.target as HTMLImageElement).style.display = 'none';
+                                (e.target as HTMLImageElement)
+                                  .nextElementSibling?.classList.remove('hidden');
+                              }}
+                            />
+                          ) : null}
+                          <div
+                            className={`w-8 h-8 rounded-full flex items-center
+                                        justify-center text-[10px] font-bold
+                                        border border-neutral-600/40 flex-shrink-0
+                                        ${char.avatar ? 'hidden' : ''}`}
+                            style={{ backgroundColor: '#2a2a3a', color: '#c9a84c' }}
+                          >
+                            {getInitials(char.name)}
+                          </div>
+
+                          {/* Name + occupation */}
+                          <div className="min-w-0">
+                            <p className="text-xs text-neutral-200
+                                          font-medium truncate">
+                              {char.name}
+                            </p>
+                            <p className="text-[10px] text-neutral-500 truncate">
+                              {char.occupation
+                               || ROLE_LABELS[char.role || '']
+                               || char.role || ''}
+                              {char.age ? ` · ${char.age} лет` : ''}
+                            </p>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
                 )}
 
                 {/* Phases */}

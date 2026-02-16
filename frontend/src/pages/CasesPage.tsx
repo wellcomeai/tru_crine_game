@@ -12,6 +12,15 @@ import { getImageUrl } from '../utils/helpers';
 import { DIFFICULTY_LABELS } from '../utils/constants';
 import type { Case } from '../types';
 
+interface CaseDetailCharacter {
+  name: string;
+  slug: string;
+  occupation: string | null;
+  role: string | null;
+  avatar: string | null;
+  age: number | null;
+}
+
 interface CaseDetail {
   id: string;
   title: string;
@@ -19,6 +28,7 @@ interface CaseDetail {
   difficulty: string;
   cover_image?: string | null;
   phases?: Array<{ id: string; name: string; description: string }>;
+  characters?: CaseDetailCharacter[];
 }
 
 export default function CasesPage() {

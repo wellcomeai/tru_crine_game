@@ -36,8 +36,18 @@ class CaseListItem(BaseModel):
         from_attributes = True
 
 
+class CaseCharacterPreview(BaseModel):
+    name: str
+    slug: str
+    occupation: Optional[str] = None
+    role: Optional[str] = None
+    avatar: Optional[str] = None
+    age: Optional[int] = None
+
+
 class CaseDetail(CaseListItem):
     phases: List[PhaseSchema] = []
+    characters: List[CaseCharacterPreview] = []
 
 
 class StartCaseResponse(BaseModel):

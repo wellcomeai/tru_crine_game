@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState, useCallback, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { motion, useInView, AnimatePresence, useScroll, useTransform, useSpring, useMotionValue } from 'framer-motion';
+import { motion, useInView, AnimatePresence, useScroll, useSpring, useMotionValue } from 'framer-motion';
 import { useAuthStore } from '../stores/authStore';
 import { ChevronDown, Search, MessageSquare, Network, Scale, Fingerprint } from 'lucide-react';
 
@@ -140,6 +140,90 @@ function FloatingDust() {
   );
 }
 
+/* ═══════════════════ DETECTIVE THEMED SCROLL OBJECTS ═══════════════════ */
+const DETECTIVE_OBJECTS = [
+  // Fingerprints
+  { svg: `<svg viewBox="0 0 60 60" fill="none" xmlns="http://www.w3.org/2000/svg"><ellipse cx="30" cy="30" rx="18" ry="22" stroke="currentColor" stroke-width="0.8" opacity="0.5"/><ellipse cx="30" cy="30" rx="13" ry="17" stroke="currentColor" stroke-width="0.6" opacity="0.4"/><ellipse cx="30" cy="30" rx="8" ry="12" stroke="currentColor" stroke-width="0.5" opacity="0.3"/><ellipse cx="30" cy="30" rx="4" ry="7" stroke="currentColor" stroke-width="0.4" opacity="0.25"/><path d="M30 8 C30 8 42 18 42 30 C42 42 30 52 30 52" stroke="currentColor" stroke-width="0.5" opacity="0.3"/></svg>`, x: '5%', y: '25%', size: 80, rotate: -15, section: 0 },
+  { svg: `<svg viewBox="0 0 60 60" fill="none" xmlns="http://www.w3.org/2000/svg"><ellipse cx="30" cy="30" rx="18" ry="22" stroke="currentColor" stroke-width="0.8" opacity="0.5"/><ellipse cx="30" cy="30" rx="13" ry="17" stroke="currentColor" stroke-width="0.6" opacity="0.4"/><ellipse cx="30" cy="30" rx="8" ry="12" stroke="currentColor" stroke-width="0.5" opacity="0.3"/></svg>`, x: '92%', y: '65%', size: 55, rotate: 25, section: 2 },
+
+  // Magnifying glass
+  { svg: `<svg viewBox="0 0 60 60" fill="none" xmlns="http://www.w3.org/2000/svg"><circle cx="25" cy="25" r="14" stroke="currentColor" stroke-width="1" opacity="0.4"/><circle cx="25" cy="25" r="10" stroke="currentColor" stroke-width="0.5" opacity="0.2"/><line x1="36" y1="36" x2="52" y2="52" stroke="currentColor" stroke-width="1.5" opacity="0.4" stroke-linecap="round"/></svg>`, x: '88%', y: '15%', size: 70, rotate: 20, section: 1 },
+  { svg: `<svg viewBox="0 0 60 60" fill="none" xmlns="http://www.w3.org/2000/svg"><circle cx="25" cy="25" r="14" stroke="currentColor" stroke-width="1" opacity="0.4"/><line x1="36" y1="36" x2="52" y2="52" stroke="currentColor" stroke-width="1.5" opacity="0.4" stroke-linecap="round"/></svg>`, x: '3%', y: '72%', size: 50, rotate: -30, section: 4 },
+
+  // Question marks
+  { svg: `<svg viewBox="0 0 40 60" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M12 15 C12 8 20 4 26 8 C32 12 28 20 20 22 L20 32" stroke="currentColor" stroke-width="1.2" opacity="0.35" stroke-linecap="round"/><circle cx="20" cy="40" r="2" fill="currentColor" opacity="0.3"/></svg>`, x: '95%', y: '40%', size: 40, rotate: 10, section: 1 },
+  { svg: `<svg viewBox="0 0 40 60" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M12 15 C12 8 20 4 26 8 C32 12 28 20 20 22 L20 32" stroke="currentColor" stroke-width="1.2" opacity="0.35" stroke-linecap="round"/><circle cx="20" cy="40" r="2" fill="currentColor" opacity="0.3"/></svg>`, x: '2%', y: '50%', size: 35, rotate: -8, section: 3 },
+
+  // Bullet casing
+  { svg: `<svg viewBox="0 0 20 50" fill="none" xmlns="http://www.w3.org/2000/svg"><rect x="4" y="15" width="12" height="30" rx="1" stroke="currentColor" stroke-width="0.8" opacity="0.3"/><path d="M4 15 L10 4 L16 15" stroke="currentColor" stroke-width="0.8" opacity="0.35"/><line x1="4" y1="20" x2="16" y2="20" stroke="currentColor" stroke-width="0.5" opacity="0.2"/></svg>`, x: '8%', y: '85%', size: 30, rotate: 35, section: 2 },
+  { svg: `<svg viewBox="0 0 20 50" fill="none" xmlns="http://www.w3.org/2000/svg"><rect x="4" y="15" width="12" height="30" rx="1" stroke="currentColor" stroke-width="0.8" opacity="0.3"/><path d="M4 15 L10 4 L16 15" stroke="currentColor" stroke-width="0.8" opacity="0.35"/><line x1="4" y1="20" x2="16" y2="20" stroke="currentColor" stroke-width="0.5" opacity="0.2"/></svg>`, x: '93%', y: '88%', size: 25, rotate: -20, section: 5 },
+
+  // Footprint
+  { svg: `<svg viewBox="0 0 40 70" fill="none" xmlns="http://www.w3.org/2000/svg"><ellipse cx="20" cy="40" rx="12" ry="20" stroke="currentColor" stroke-width="0.8" opacity="0.3"/><ellipse cx="12" cy="14" rx="5" ry="6" stroke="currentColor" stroke-width="0.6" opacity="0.25"/><ellipse cx="22" cy="10" rx="4.5" ry="5.5" stroke="currentColor" stroke-width="0.6" opacity="0.25"/><ellipse cx="31" cy="14" rx="4" ry="5" stroke="currentColor" stroke-width="0.6" opacity="0.2"/></svg>`, x: '90%', y: '30%', size: 50, rotate: 15, section: 3 },
+  { svg: `<svg viewBox="0 0 40 70" fill="none" xmlns="http://www.w3.org/2000/svg"><ellipse cx="20" cy="40" rx="12" ry="20" stroke="currentColor" stroke-width="0.8" opacity="0.3"/><ellipse cx="12" cy="14" rx="5" ry="6" stroke="currentColor" stroke-width="0.6" opacity="0.25"/><ellipse cx="22" cy="10" rx="4.5" ry="5.5" stroke="currentColor" stroke-width="0.6" opacity="0.25"/></svg>`, x: '6%', y: '60%', size: 45, rotate: -10, section: 5 },
+
+  // Blood drops
+  { svg: `<svg viewBox="0 0 30 40" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M15 4 C15 4 4 18 4 25 C4 32 9 36 15 36 C21 36 26 32 26 25 C26 18 15 4 15 4Z" stroke="currentColor" stroke-width="0.8" opacity="0.3"/></svg>`, x: '96%', y: '52%', size: 28, rotate: 8, section: 0 },
+  { svg: `<svg viewBox="0 0 30 40" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M15 4 C15 4 4 18 4 25 C4 32 9 36 15 36 C21 36 26 32 26 25 C26 18 15 4 15 4Z" stroke="currentColor" stroke-width="0.8" opacity="0.3"/></svg>`, x: '4%', y: '38%', size: 22, rotate: -12, section: 4 },
+
+  // Crosshair / target
+  { svg: `<svg viewBox="0 0 50 50" fill="none" xmlns="http://www.w3.org/2000/svg"><circle cx="25" cy="25" r="18" stroke="currentColor" stroke-width="0.6" opacity="0.25"/><circle cx="25" cy="25" r="10" stroke="currentColor" stroke-width="0.5" opacity="0.2"/><circle cx="25" cy="25" r="3" stroke="currentColor" stroke-width="0.4" opacity="0.2"/><line x1="25" y1="2" x2="25" y2="14" stroke="currentColor" stroke-width="0.5" opacity="0.2"/><line x1="25" y1="36" x2="25" y2="48" stroke="currentColor" stroke-width="0.5" opacity="0.2"/><line x1="2" y1="25" x2="14" y2="25" stroke="currentColor" stroke-width="0.5" opacity="0.2"/><line x1="36" y1="25" x2="48" y2="25" stroke="currentColor" stroke-width="0.5" opacity="0.2"/></svg>`, x: '7%', y: '10%', size: 60, rotate: 0, section: 3 },
+
+  // Key
+  { svg: `<svg viewBox="0 0 60 30" fill="none" xmlns="http://www.w3.org/2000/svg"><circle cx="12" cy="15" r="8" stroke="currentColor" stroke-width="0.8" opacity="0.3"/><circle cx="12" cy="15" r="3" stroke="currentColor" stroke-width="0.5" opacity="0.2"/><line x1="20" y1="15" x2="52" y2="15" stroke="currentColor" stroke-width="0.8" opacity="0.3"/><line x1="45" y1="15" x2="45" y2="22" stroke="currentColor" stroke-width="0.7" opacity="0.25"/><line x1="50" y1="15" x2="50" y2="20" stroke="currentColor" stroke-width="0.7" opacity="0.25"/></svg>`, x: '85%', y: '78%', size: 55, rotate: 25, section: 4 },
+
+  // Eye (surveillance)
+  { svg: `<svg viewBox="0 0 60 35" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M4 17.5 C4 17.5 15 4 30 4 C45 4 56 17.5 56 17.5 C56 17.5 45 31 30 31 C15 31 4 17.5 4 17.5Z" stroke="currentColor" stroke-width="0.8" opacity="0.3"/><circle cx="30" cy="17.5" r="7" stroke="currentColor" stroke-width="0.6" opacity="0.25"/><circle cx="30" cy="17.5" r="3" fill="currentColor" opacity="0.15"/></svg>`, x: '92%', y: '8%', size: 50, rotate: -5, section: 5 },
+];
+
+function DetectiveScrollObjects() {
+  return (
+    <div className="fixed inset-0 pointer-events-none z-[1] overflow-hidden hidden lg:block">
+      {DETECTIVE_OBJECTS.map((obj, i) => (
+        <DetectiveObject key={i} obj={obj} index={i} />
+      ))}
+    </div>
+  );
+}
+
+function DetectiveObject({ obj, index }: { obj: typeof DETECTIVE_OBJECTS[0]; index: number }) {
+  const ref = useRef(null);
+  const [visible, setVisible] = useState(false);
+
+  useEffect(() => {
+    const handleScroll = () => {
+      const scrollY = window.scrollY;
+      const vh = window.innerHeight;
+      // Each section ~1 viewport height; stagger appearance
+      const sectionStart = obj.section * vh * 0.9;
+      const sectionEnd = sectionStart + vh * 1.5;
+      const inRange = scrollY >= sectionStart - vh * 0.3 && scrollY <= sectionEnd;
+      setVisible(inRange);
+    };
+
+    window.addEventListener('scroll', handleScroll, { passive: true });
+    handleScroll();
+    return () => window.removeEventListener('scroll', handleScroll);
+  }, [obj.section]);
+
+  return (
+    <motion.div
+      ref={ref}
+      initial={{ opacity: 0, scale: 0.5 }}
+      animate={visible ? { opacity: 1, scale: 1 } : { opacity: 0, scale: 0.5 }}
+      transition={{ duration: 1.2, delay: index * 0.05, ease: [0.22, 1, 0.36, 1] }}
+      className="absolute"
+      style={{
+        left: obj.x, top: obj.y,
+        width: obj.size, height: obj.size,
+        transform: `rotate(${obj.rotate}deg)`,
+        color: GOLD_DIM,
+      }}
+      dangerouslySetInnerHTML={{ __html: obj.svg }}
+    />
+  );
+}
+
 /* ═══════════════════ SCROLL REVEAL ═══════════════════ */
 function SR({ children, className = '', delay = 0, direction = 'up' }: {
   children: React.ReactNode; className?: string; delay?: number;
@@ -248,7 +332,7 @@ function FaqItem({ item, isOpen, onToggle }: { item: typeof FAQ[0]; isOpen: bool
   );
 }
 
-/* ═══════════════════ MONITOR FRAME ═══════════════════ */
+/* ═══════════════════ MONITOR FRAME (regular) ═══════════════════ */
 function MonitorFrame({ src, alt, stamp }: { src: string; alt: string; stamp?: string }) {
   return (
     <motion.div
@@ -275,6 +359,104 @@ function MonitorFrame({ src, alt, stamp }: { src: string; alt: string; stamp?: s
         </div>
         <div className="relative overflow-hidden">
           <img src={src} alt={alt} loading="lazy" className="w-full block transition-transform duration-700 group-hover:scale-[1.02]" />
+          <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-700 pointer-events-none"
+            style={{ boxShadow: `inset 0 0 100px ${GOLD}08` }} />
+        </div>
+      </div>
+    </motion.div>
+  );
+}
+
+/* ═══════════════════ MAGNIFIER FRAME (for board) ═══════════════════ */
+function MagnifierFrame({ src, alt, stamp }: { src: string; alt: string; stamp?: string }) {
+  const containerRef = useRef<HTMLDivElement>(null);
+  const imgRef = useRef<HTMLImageElement>(null);
+  const [hovering, setHovering] = useState(false);
+  const [pos, setPos] = useState({ x: 0, y: 0, bgX: 0, bgY: 0 });
+  const LENS_SIZE = 160;
+  const ZOOM = 2;
+
+  const onMouseMove = useCallback((e: React.MouseEvent) => {
+    if (!containerRef.current || !imgRef.current) return;
+    const rect = imgRef.current.getBoundingClientRect();
+    const x = e.clientX - rect.left;
+    const y = e.clientY - rect.top;
+    // Clamp within image bounds
+    if (x < 0 || y < 0 || x > rect.width || y > rect.height) {
+      setHovering(false);
+      return;
+    }
+    setHovering(true);
+    // Background position for zoomed view
+    const bgX = (x / rect.width) * 100;
+    const bgY = (y / rect.height) * 100;
+    setPos({
+      x: e.clientX - containerRef.current.getBoundingClientRect().left,
+      y: e.clientY - containerRef.current.getBoundingClientRect().top,
+      bgX, bgY,
+    });
+  }, []);
+
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 30 }}
+      whileInView={{ opacity: 1, y: 0 }}
+      viewport={{ once: true }}
+      transition={{ duration: 0.8, ease: [0.22, 1, 0.36, 1] }}
+      className="group rounded-2xl overflow-hidden relative"
+      style={{
+        background: 'linear-gradient(135deg, rgba(212,165,70,0.08) 0%, rgba(15,15,20,0.9) 40%, rgba(15,15,20,0.95) 100%)',
+        padding: '1px',
+      }}>
+      {stamp && <EvidenceStamp label={stamp} />}
+      <div ref={containerRef} className="rounded-2xl overflow-hidden" style={{ backgroundColor: '#0c0c10' }}>
+        <div className="flex items-center gap-2 px-5 py-3" style={{ backgroundColor: 'rgba(255,255,255,0.02)' }}>
+          <div className="flex gap-1.5">
+            <div className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: '#ff5f5730' }} />
+            <div className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: '#ffbd2e25' }} />
+            <div className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: '#28c94025' }} />
+          </div>
+          <div className="flex-1 mx-6">
+            <div className="h-5 rounded-lg max-w-xs" style={{ backgroundColor: 'rgba(255,255,255,0.03)' }} />
+          </div>
+        </div>
+        <div className="relative overflow-hidden"
+          onMouseMove={onMouseMove}
+          onMouseLeave={() => setHovering(false)}
+          style={{ cursor: 'none' }}>
+          <img ref={imgRef} src={src} alt={alt} loading="lazy"
+            className="w-full block transition-transform duration-700 group-hover:scale-[1.005]" />
+
+          {/* Magnifier lens */}
+          {hovering && (
+            <div className="absolute pointer-events-none z-30"
+              style={{
+                left: pos.x - LENS_SIZE / 2,
+                top: pos.y - LENS_SIZE / 2,
+                width: LENS_SIZE,
+                height: LENS_SIZE,
+                borderRadius: '50%',
+                border: `2px solid ${GOLD}50`,
+                boxShadow: `0 0 30px rgba(212,165,70,0.15), 0 0 60px rgba(0,0,0,0.6), inset 0 0 20px rgba(0,0,0,0.3)`,
+                backgroundImage: `url(${src})`,
+                backgroundSize: `${ZOOM * 100}% ${ZOOM * 100}%`,
+                backgroundPosition: `${pos.bgX}% ${pos.bgY}%`,
+                backgroundRepeat: 'no-repeat',
+                transition: 'left 0.05s, top 0.05s',
+              }}>
+              {/* Lens reflection */}
+              <div className="absolute inset-0 rounded-full"
+                style={{
+                  background: 'linear-gradient(135deg, rgba(255,255,255,0.08) 0%, transparent 50%, rgba(0,0,0,0.15) 100%)',
+                }} />
+              {/* Crosshair inside lens */}
+              <div className="absolute top-1/2 left-0 right-0 h-[0.5px] -translate-y-1/2"
+                style={{ backgroundColor: `${GOLD}20` }} />
+              <div className="absolute left-1/2 top-0 bottom-0 w-[0.5px] -translate-x-1/2"
+                style={{ backgroundColor: `${GOLD}20` }} />
+            </div>
+          )}
+
           <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-700 pointer-events-none"
             style={{ boxShadow: `inset 0 0 100px ${GOLD}08` }} />
         </div>
@@ -369,33 +551,33 @@ function CrimeTape({ text = 'УЛИКИ · ДЕЛО №001 · СЕКРЕТНО' 
   );
 }
 
-/* ═══════════════════ PARALLAX HERO IMAGE ═══════════════════ */
-function ParallaxHeroImage() {
-  const ref = useRef(null);
-  const { scrollYProgress } = useScroll({ target: ref, offset: ['start start', 'end start'] });
-  const y = useTransform(scrollYProgress, [0, 1], ['0%', '20%']);
-  const opacity = useTransform(scrollYProgress, [0, 0.6], [1, 0]);
-  const scale = useTransform(scrollYProgress, [0, 1], [1, 1.1]);
-
+/* ═══════════════════ STATIC HERO IMAGE (no parallax scroll) ═══════════════════ */
+function HeroImage() {
   return (
-    <motion.div ref={ref} className="absolute top-0 right-0 bottom-0 w-[55%] hidden md:block" style={{ y, opacity }}>
-      <motion.img src={`${R2}/photo_2026-02-16_12-23-44.jpg`} alt=""
+    <div className="absolute top-0 bottom-0 hidden md:block"
+      style={{ right: '-10px', width: '55%' }}>
+      <img src={`${R2}/photo_2026-02-16_12-23-44.jpg`} alt=""
         className="absolute inset-0 w-full h-full object-cover"
-        style={{ scale, filter: 'contrast(1.15) saturate(0.7) brightness(0.55)', objectPosition: '80% 20%' }} />
+        style={{ filter: 'contrast(1.15) saturate(0.7) brightness(0.55)', objectPosition: '80% 20%' }} />
+      {/* Left fade — seamless blend */}
       <div className="absolute inset-0"
         style={{ background: `linear-gradient(to right, ${DARK} 0%, rgba(7,7,10,0.92) 10%, rgba(7,7,10,0.5) 30%, rgba(7,7,10,0.1) 50%, transparent 70%)` }} />
+      {/* Bottom fade */}
       <div className="absolute bottom-0 left-0 right-0 h-[40%]"
         style={{ background: `linear-gradient(to top, ${DARK} 0%, transparent 100%)` }} />
+      {/* Top fade */}
       <div className="absolute top-0 left-0 right-0 h-32"
         style={{ background: `linear-gradient(to bottom, ${DARK} 0%, transparent 100%)` }} />
+      {/* Color grade */}
       <div className="absolute inset-0"
         style={{ background: 'linear-gradient(180deg, rgba(15,12,8,0.3) 0%, rgba(7,7,10,0.15) 50%, rgba(7,7,10,0.4) 100%)' }} />
+      {/* Vignette */}
       <div className="absolute inset-0" style={{ boxShadow: 'inset 0 0 150px rgba(0,0,0,0.5)' }} />
-    </motion.div>
+    </div>
   );
 }
 
-/* ═══════════════════ FLASHLIGHT CURSOR ═══════════════════ */
+/* ═══════════════════ FLASHLIGHT CURSOR (directional cone) ═══════════════════ */
 function FlashlightCursor() {
   const cursorX = useMotionValue(-100);
   const cursorY = useMotionValue(-100);
@@ -413,27 +595,36 @@ function FlashlightCursor() {
 
   return (
     <>
-      {/* Flashlight ambient glow */}
+      {/* Main flashlight cone — brighter, more directional */}
       <motion.div className="fixed top-0 left-0 z-[9998] pointer-events-none hidden lg:block"
         style={{
           x: springX, y: springY,
           translateX: '-50%', translateY: '-50%',
-          width: 500, height: 500,
-          background: 'radial-gradient(circle, rgba(212,165,70,0.025) 0%, rgba(212,165,70,0.01) 30%, transparent 70%)',
-          filter: 'blur(10px)',
+          width: 600, height: 600,
+          background: `radial-gradient(ellipse 40% 45% at 50% 48%, rgba(255,235,180,0.07) 0%, rgba(212,165,70,0.04) 25%, rgba(212,165,70,0.015) 50%, transparent 75%)`,
+        }} />
+      {/* Inner bright spot */}
+      <motion.div className="fixed top-0 left-0 z-[9998] pointer-events-none hidden lg:block"
+        style={{
+          x: springX, y: springY,
+          translateX: '-50%', translateY: '-50%',
+          width: 200, height: 200,
+          background: 'radial-gradient(circle, rgba(255,240,200,0.06) 0%, rgba(212,165,70,0.03) 40%, transparent 70%)',
         }} />
       {/* Crosshair cursor */}
       <motion.div className="fixed top-0 left-0 z-[10000] pointer-events-none hidden lg:block"
         style={{ x: springX, y: springY, translateX: '-50%', translateY: '-50%' }}>
+        {/* Outer ring */}
         <motion.div className="rounded-full"
-          style={{ width: 8, height: 8, border: `1.5px solid ${GOLD}60` }}
-          animate={{ scale: [1, 1.2, 1] }}
-          transition={{ duration: 2, repeat: Infinity, ease: 'easeInOut' }} />
+          style={{ width: 10, height: 10, border: `1.5px solid ${GOLD}50`, backgroundColor: `${GOLD}08` }}
+          animate={{ scale: [1, 1.15, 1] }}
+          transition={{ duration: 2.5, repeat: Infinity, ease: 'easeInOut' }} />
+        {/* Crosshair lines */}
         <div className="absolute -translate-x-1/2 -translate-y-1/2 top-1/2 left-1/2">
-          <div className="absolute w-[1px] h-3 -top-5 left-1/2 -translate-x-1/2" style={{ backgroundColor: `${GOLD}25` }} />
-          <div className="absolute w-[1px] h-3 -bottom-[-2px] left-1/2 -translate-x-1/2" style={{ backgroundColor: `${GOLD}25` }} />
-          <div className="absolute h-[1px] w-3 top-1/2 -left-5 -translate-y-1/2" style={{ backgroundColor: `${GOLD}25` }} />
-          <div className="absolute h-[1px] w-3 top-1/2 -right-[-2px] -translate-y-1/2" style={{ backgroundColor: `${GOLD}25` }} />
+          <div className="absolute w-[1px] h-4 -top-6 left-1/2 -translate-x-1/2" style={{ background: `linear-gradient(to bottom, transparent, ${GOLD}30)` }} />
+          <div className="absolute w-[1px] h-4 -bottom-[-3px] left-1/2 -translate-x-1/2" style={{ background: `linear-gradient(to top, transparent, ${GOLD}30)` }} />
+          <div className="absolute h-[1px] w-4 top-1/2 -left-6 -translate-y-1/2" style={{ background: `linear-gradient(to right, transparent, ${GOLD}30)` }} />
+          <div className="absolute h-[1px] w-4 top-1/2 -right-[-3px] -translate-y-1/2" style={{ background: `linear-gradient(to left, transparent, ${GOLD}30)` }} />
         </div>
       </motion.div>
     </>
@@ -477,12 +668,15 @@ export default function PublicLandingPage() {
       <FilmGrain />
       <CaseProgress />
       <FlashlightCursor />
+      <DetectiveScrollObjects />
 
       {/* ═══════ HERO ═══════ */}
       <section className="relative min-h-screen flex items-center overflow-hidden">
         <div className="absolute inset-0">
           <div className="absolute inset-0" style={{ background: DARK }} />
-          <ParallaxHeroImage />
+
+          {/* Static hero image — NO scroll animation, shifted 10px right */}
+          <HeroImage />
 
           {/* Mobile */}
           <div className="absolute inset-0 md:hidden">
@@ -646,7 +840,7 @@ export default function PublicLandingPage() {
 
       <CrimeTape text="ДОСКА УЛИК · ДЕДУКЦИЯ · АНАЛИЗ" />
 
-      {/* ═══════ BOARD ═══════ */}
+      {/* ═══════ BOARD — with magnifier ═══════ */}
       <section className="relative py-24 sm:py-32 px-6">
         <div className="absolute inset-0 bg-[radial-gradient(ellipse_50%_40%_at_20%_50%,_rgba(212,165,70,0.02)_0%,_transparent_60%)]" />
         <div className="max-w-6xl mx-auto relative">
@@ -670,7 +864,7 @@ export default function PublicLandingPage() {
             </div>
           </SR>
           <SR delay={0.25} direction="scale">
-            <MonitorFrame src={`${R2}/doska.png`} alt="Доска улик" stamp="ВЕЩДОК №3" />
+            <MagnifierFrame src={`${R2}/doska.png`} alt="Доска улик" stamp="ВЕЩДОК №3" />
           </SR>
         </div>
       </section>
@@ -891,7 +1085,6 @@ export default function PublicLandingPage() {
       <style>{`
         @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500&family=Playfair+Display:ital,wght@0,400;0,700;0,900;1,400&family=Source+Sans+3:wght@200;300;400;600;700&display=swap');
 
-        /* Film grain */
         @keyframes grain {
           0%, 100% { transform: translate(0, 0); }
           10% { transform: translate(-5%, -10%); }
@@ -910,12 +1103,10 @@ export default function PublicLandingPage() {
           animation: grain 0.5s steps(6) infinite;
         }
 
-        /* Marquee */
         @keyframes marquee-slide { 0% { transform: translateX(0); } 100% { transform: translateX(-50%); } }
         .marquee-track { animation: marquee-slide 60s linear infinite; }
         .marquee-track:hover { animation-play-state: paused; }
 
-        /* Particles */
         @keyframes dust-drift {
           0%, 100% { transform: translateY(0) translateX(0); opacity: inherit; }
           25% { transform: translateY(-40px) translateX(15px); }
@@ -932,18 +1123,15 @@ export default function PublicLandingPage() {
         }
         .smoke-drift { animation: smoke-move ease-in-out infinite; }
 
-        /* Scan line */
         @keyframes scan { 0% { top: -2%; } 100% { top: 102%; } }
         .scan-line { animation: scan 8s linear infinite; }
 
-        /* Classified badge */
         .classified-glow { transition: all 0.4s ease; }
         .classified-glow:hover {
           box-shadow: 0 0 20px rgba(212,165,70,0.08), inset 0 0 20px rgba(212,165,70,0.03);
           border-color: rgba(212,165,70,0.2) !important;
         }
 
-        /* Section styles */
         .section-label {
           display: inline-block; font-size: 10px; text-transform: uppercase;
           letter-spacing: 0.3em; margin-bottom: 1rem; font-family: 'JetBrains Mono', monospace;
@@ -977,7 +1165,6 @@ export default function PublicLandingPage() {
         ::selection { background: rgba(212,165,70,0.2); color: #f0d060; }
         html { scroll-behavior: smooth; }
 
-        /* Custom cursor (desktop only) */
         @media (min-width: 1024px) { * { cursor: none !important; } }
       `}</style>
     </div>

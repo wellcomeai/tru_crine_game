@@ -80,10 +80,10 @@ function AnimatedCounter({ target, suffix = '', duration = 2000 }: { target: num
   return <span ref={ref}>{value.toLocaleString()}{suffix}</span>;
 }
 
-/* ═══════════════════ FILM GRAIN ═══════════════════ */
+/* ═══════════════════ FILM GRAIN (hidden on mobile) ═══════════════════ */
 function FilmGrain() {
   return (
-    <div className="fixed inset-0 z-[9999] pointer-events-none mix-blend-overlay opacity-[0.035]">
+    <div className="fixed inset-0 z-[9999] pointer-events-none mix-blend-overlay opacity-[0.035] hidden sm:block">
       <div className="absolute inset-0 film-grain" />
     </div>
   );
@@ -140,90 +140,70 @@ function FloatingDust() {
   );
 }
 
-/* ═══════════════════ DETECTIVE THEMED SCROLL OBJECTS ═══════════════════ */
+/* ═══════════════════ DETECTIVE SCROLL OBJECTS ═══════════════════ */
 const DETECTIVE_OBJECTS = [
-  // Fingerprints
-  { svg: `<svg viewBox="0 0 60 60" fill="none" xmlns="http://www.w3.org/2000/svg"><ellipse cx="30" cy="30" rx="18" ry="22" stroke="currentColor" stroke-width="0.8" opacity="0.5"/><ellipse cx="30" cy="30" rx="13" ry="17" stroke="currentColor" stroke-width="0.6" opacity="0.4"/><ellipse cx="30" cy="30" rx="8" ry="12" stroke="currentColor" stroke-width="0.5" opacity="0.3"/><ellipse cx="30" cy="30" rx="4" ry="7" stroke="currentColor" stroke-width="0.4" opacity="0.25"/><path d="M30 8 C30 8 42 18 42 30 C42 42 30 52 30 52" stroke="currentColor" stroke-width="0.5" opacity="0.3"/></svg>`, x: '5%', y: '25%', size: 80, rotate: -15, section: 0 },
-  { svg: `<svg viewBox="0 0 60 60" fill="none" xmlns="http://www.w3.org/2000/svg"><ellipse cx="30" cy="30" rx="18" ry="22" stroke="currentColor" stroke-width="0.8" opacity="0.5"/><ellipse cx="30" cy="30" rx="13" ry="17" stroke="currentColor" stroke-width="0.6" opacity="0.4"/><ellipse cx="30" cy="30" rx="8" ry="12" stroke="currentColor" stroke-width="0.5" opacity="0.3"/></svg>`, x: '92%', y: '65%', size: 55, rotate: 25, section: 2 },
-
-  // Magnifying glass
-  { svg: `<svg viewBox="0 0 60 60" fill="none" xmlns="http://www.w3.org/2000/svg"><circle cx="25" cy="25" r="14" stroke="currentColor" stroke-width="1" opacity="0.4"/><circle cx="25" cy="25" r="10" stroke="currentColor" stroke-width="0.5" opacity="0.2"/><line x1="36" y1="36" x2="52" y2="52" stroke="currentColor" stroke-width="1.5" opacity="0.4" stroke-linecap="round"/></svg>`, x: '88%', y: '15%', size: 70, rotate: 20, section: 1 },
-  { svg: `<svg viewBox="0 0 60 60" fill="none" xmlns="http://www.w3.org/2000/svg"><circle cx="25" cy="25" r="14" stroke="currentColor" stroke-width="1" opacity="0.4"/><line x1="36" y1="36" x2="52" y2="52" stroke="currentColor" stroke-width="1.5" opacity="0.4" stroke-linecap="round"/></svg>`, x: '3%', y: '72%', size: 50, rotate: -30, section: 4 },
-
-  // Question marks
-  { svg: `<svg viewBox="0 0 40 60" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M12 15 C12 8 20 4 26 8 C32 12 28 20 20 22 L20 32" stroke="currentColor" stroke-width="1.2" opacity="0.35" stroke-linecap="round"/><circle cx="20" cy="40" r="2" fill="currentColor" opacity="0.3"/></svg>`, x: '95%', y: '40%', size: 40, rotate: 10, section: 1 },
-  { svg: `<svg viewBox="0 0 40 60" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M12 15 C12 8 20 4 26 8 C32 12 28 20 20 22 L20 32" stroke="currentColor" stroke-width="1.2" opacity="0.35" stroke-linecap="round"/><circle cx="20" cy="40" r="2" fill="currentColor" opacity="0.3"/></svg>`, x: '2%', y: '50%', size: 35, rotate: -8, section: 3 },
-
-  // Bullet casing
-  { svg: `<svg viewBox="0 0 20 50" fill="none" xmlns="http://www.w3.org/2000/svg"><rect x="4" y="15" width="12" height="30" rx="1" stroke="currentColor" stroke-width="0.8" opacity="0.3"/><path d="M4 15 L10 4 L16 15" stroke="currentColor" stroke-width="0.8" opacity="0.35"/><line x1="4" y1="20" x2="16" y2="20" stroke="currentColor" stroke-width="0.5" opacity="0.2"/></svg>`, x: '8%', y: '85%', size: 30, rotate: 35, section: 2 },
-  { svg: `<svg viewBox="0 0 20 50" fill="none" xmlns="http://www.w3.org/2000/svg"><rect x="4" y="15" width="12" height="30" rx="1" stroke="currentColor" stroke-width="0.8" opacity="0.3"/><path d="M4 15 L10 4 L16 15" stroke="currentColor" stroke-width="0.8" opacity="0.35"/><line x1="4" y1="20" x2="16" y2="20" stroke="currentColor" stroke-width="0.5" opacity="0.2"/></svg>`, x: '93%', y: '88%', size: 25, rotate: -20, section: 5 },
-
-  // Footprint
-  { svg: `<svg viewBox="0 0 40 70" fill="none" xmlns="http://www.w3.org/2000/svg"><ellipse cx="20" cy="40" rx="12" ry="20" stroke="currentColor" stroke-width="0.8" opacity="0.3"/><ellipse cx="12" cy="14" rx="5" ry="6" stroke="currentColor" stroke-width="0.6" opacity="0.25"/><ellipse cx="22" cy="10" rx="4.5" ry="5.5" stroke="currentColor" stroke-width="0.6" opacity="0.25"/><ellipse cx="31" cy="14" rx="4" ry="5" stroke="currentColor" stroke-width="0.6" opacity="0.2"/></svg>`, x: '90%', y: '30%', size: 50, rotate: 15, section: 3 },
-  { svg: `<svg viewBox="0 0 40 70" fill="none" xmlns="http://www.w3.org/2000/svg"><ellipse cx="20" cy="40" rx="12" ry="20" stroke="currentColor" stroke-width="0.8" opacity="0.3"/><ellipse cx="12" cy="14" rx="5" ry="6" stroke="currentColor" stroke-width="0.6" opacity="0.25"/><ellipse cx="22" cy="10" rx="4.5" ry="5.5" stroke="currentColor" stroke-width="0.6" opacity="0.25"/></svg>`, x: '6%', y: '60%', size: 45, rotate: -10, section: 5 },
-
-  // Blood drops
-  { svg: `<svg viewBox="0 0 30 40" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M15 4 C15 4 4 18 4 25 C4 32 9 36 15 36 C21 36 26 32 26 25 C26 18 15 4 15 4Z" stroke="currentColor" stroke-width="0.8" opacity="0.3"/></svg>`, x: '96%', y: '52%', size: 28, rotate: 8, section: 0 },
-  { svg: `<svg viewBox="0 0 30 40" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M15 4 C15 4 4 18 4 25 C4 32 9 36 15 36 C21 36 26 32 26 25 C26 18 15 4 15 4Z" stroke="currentColor" stroke-width="0.8" opacity="0.3"/></svg>`, x: '4%', y: '38%', size: 22, rotate: -12, section: 4 },
-
-  // Crosshair / target
-  { svg: `<svg viewBox="0 0 50 50" fill="none" xmlns="http://www.w3.org/2000/svg"><circle cx="25" cy="25" r="18" stroke="currentColor" stroke-width="0.6" opacity="0.25"/><circle cx="25" cy="25" r="10" stroke="currentColor" stroke-width="0.5" opacity="0.2"/><circle cx="25" cy="25" r="3" stroke="currentColor" stroke-width="0.4" opacity="0.2"/><line x1="25" y1="2" x2="25" y2="14" stroke="currentColor" stroke-width="0.5" opacity="0.2"/><line x1="25" y1="36" x2="25" y2="48" stroke="currentColor" stroke-width="0.5" opacity="0.2"/><line x1="2" y1="25" x2="14" y2="25" stroke="currentColor" stroke-width="0.5" opacity="0.2"/><line x1="36" y1="25" x2="48" y2="25" stroke="currentColor" stroke-width="0.5" opacity="0.2"/></svg>`, x: '7%', y: '10%', size: 60, rotate: 0, section: 3 },
-
-  // Key
-  { svg: `<svg viewBox="0 0 60 30" fill="none" xmlns="http://www.w3.org/2000/svg"><circle cx="12" cy="15" r="8" stroke="currentColor" stroke-width="0.8" opacity="0.3"/><circle cx="12" cy="15" r="3" stroke="currentColor" stroke-width="0.5" opacity="0.2"/><line x1="20" y1="15" x2="52" y2="15" stroke="currentColor" stroke-width="0.8" opacity="0.3"/><line x1="45" y1="15" x2="45" y2="22" stroke="currentColor" stroke-width="0.7" opacity="0.25"/><line x1="50" y1="15" x2="50" y2="20" stroke="currentColor" stroke-width="0.7" opacity="0.25"/></svg>`, x: '85%', y: '78%', size: 55, rotate: 25, section: 4 },
-
-  // Eye (surveillance)
-  { svg: `<svg viewBox="0 0 60 35" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M4 17.5 C4 17.5 15 4 30 4 C45 4 56 17.5 56 17.5 C56 17.5 45 31 30 31 C15 31 4 17.5 4 17.5Z" stroke="currentColor" stroke-width="0.8" opacity="0.3"/><circle cx="30" cy="17.5" r="7" stroke="currentColor" stroke-width="0.6" opacity="0.25"/><circle cx="30" cy="17.5" r="3" fill="currentColor" opacity="0.15"/></svg>`, x: '92%', y: '8%', size: 50, rotate: -5, section: 5 },
+  { svg: '<svg viewBox="0 0 60 60" fill="none" xmlns="http://www.w3.org/2000/svg"><ellipse cx="30" cy="30" rx="18" ry="22" stroke="currentColor" stroke-width="0.8" opacity="0.5"/><ellipse cx="30" cy="30" rx="13" ry="17" stroke="currentColor" stroke-width="0.6" opacity="0.4"/><ellipse cx="30" cy="30" rx="8" ry="12" stroke="currentColor" stroke-width="0.5" opacity="0.3"/><ellipse cx="30" cy="30" rx="4" ry="7" stroke="currentColor" stroke-width="0.4" opacity="0.25"/><path d="M30 8 C30 8 42 18 42 30 C42 42 30 52 30 52" stroke="currentColor" stroke-width="0.5" opacity="0.3"/></svg>', x: '5%', y: '25%', size: 80, rotate: -15, section: 0 },
+  { svg: '<svg viewBox="0 0 60 60" fill="none" xmlns="http://www.w3.org/2000/svg"><ellipse cx="30" cy="30" rx="18" ry="22" stroke="currentColor" stroke-width="0.8" opacity="0.5"/><ellipse cx="30" cy="30" rx="13" ry="17" stroke="currentColor" stroke-width="0.6" opacity="0.4"/><ellipse cx="30" cy="30" rx="8" ry="12" stroke="currentColor" stroke-width="0.5" opacity="0.3"/></svg>', x: '92%', y: '65%', size: 55, rotate: 25, section: 2 },
+  { svg: '<svg viewBox="0 0 60 60" fill="none" xmlns="http://www.w3.org/2000/svg"><circle cx="25" cy="25" r="14" stroke="currentColor" stroke-width="1" opacity="0.4"/><circle cx="25" cy="25" r="10" stroke="currentColor" stroke-width="0.5" opacity="0.2"/><line x1="36" y1="36" x2="52" y2="52" stroke="currentColor" stroke-width="1.5" opacity="0.4" stroke-linecap="round"/></svg>', x: '88%', y: '15%', size: 70, rotate: 20, section: 1 },
+  { svg: '<svg viewBox="0 0 60 60" fill="none" xmlns="http://www.w3.org/2000/svg"><circle cx="25" cy="25" r="14" stroke="currentColor" stroke-width="1" opacity="0.4"/><line x1="36" y1="36" x2="52" y2="52" stroke="currentColor" stroke-width="1.5" opacity="0.4" stroke-linecap="round"/></svg>', x: '3%', y: '72%', size: 50, rotate: -30, section: 4 },
+  { svg: '<svg viewBox="0 0 40 60" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M12 15 C12 8 20 4 26 8 C32 12 28 20 20 22 L20 32" stroke="currentColor" stroke-width="1.2" opacity="0.35" stroke-linecap="round"/><circle cx="20" cy="40" r="2" fill="currentColor" opacity="0.3"/></svg>', x: '95%', y: '40%', size: 40, rotate: 10, section: 1 },
+  { svg: '<svg viewBox="0 0 40 60" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M12 15 C12 8 20 4 26 8 C32 12 28 20 20 22 L20 32" stroke="currentColor" stroke-width="1.2" opacity="0.35" stroke-linecap="round"/><circle cx="20" cy="40" r="2" fill="currentColor" opacity="0.3"/></svg>', x: '2%', y: '50%', size: 35, rotate: -8, section: 3 },
+  { svg: '<svg viewBox="0 0 20 50" fill="none" xmlns="http://www.w3.org/2000/svg"><rect x="4" y="15" width="12" height="30" rx="1" stroke="currentColor" stroke-width="0.8" opacity="0.3"/><path d="M4 15 L10 4 L16 15" stroke="currentColor" stroke-width="0.8" opacity="0.35"/><line x1="4" y1="20" x2="16" y2="20" stroke="currentColor" stroke-width="0.5" opacity="0.2"/></svg>', x: '8%', y: '85%', size: 30, rotate: 35, section: 2 },
+  { svg: '<svg viewBox="0 0 20 50" fill="none" xmlns="http://www.w3.org/2000/svg"><rect x="4" y="15" width="12" height="30" rx="1" stroke="currentColor" stroke-width="0.8" opacity="0.3"/><path d="M4 15 L10 4 L16 15" stroke="currentColor" stroke-width="0.8" opacity="0.35"/><line x1="4" y1="20" x2="16" y2="20" stroke="currentColor" stroke-width="0.5" opacity="0.2"/></svg>', x: '93%', y: '88%', size: 25, rotate: -20, section: 5 },
+  { svg: '<svg viewBox="0 0 40 70" fill="none" xmlns="http://www.w3.org/2000/svg"><ellipse cx="20" cy="40" rx="12" ry="20" stroke="currentColor" stroke-width="0.8" opacity="0.3"/><ellipse cx="12" cy="14" rx="5" ry="6" stroke="currentColor" stroke-width="0.6" opacity="0.25"/><ellipse cx="22" cy="10" rx="4.5" ry="5.5" stroke="currentColor" stroke-width="0.6" opacity="0.25"/><ellipse cx="31" cy="14" rx="4" ry="5" stroke="currentColor" stroke-width="0.6" opacity="0.2"/></svg>', x: '90%', y: '30%', size: 50, rotate: 15, section: 3 },
+  { svg: '<svg viewBox="0 0 40 70" fill="none" xmlns="http://www.w3.org/2000/svg"><ellipse cx="20" cy="40" rx="12" ry="20" stroke="currentColor" stroke-width="0.8" opacity="0.3"/><ellipse cx="12" cy="14" rx="5" ry="6" stroke="currentColor" stroke-width="0.6" opacity="0.25"/><ellipse cx="22" cy="10" rx="4.5" ry="5.5" stroke="currentColor" stroke-width="0.6" opacity="0.25"/></svg>', x: '6%', y: '60%', size: 45, rotate: -10, section: 5 },
+  { svg: '<svg viewBox="0 0 30 40" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M15 4 C15 4 4 18 4 25 C4 32 9 36 15 36 C21 36 26 32 26 25 C26 18 15 4 15 4Z" stroke="currentColor" stroke-width="0.8" opacity="0.3"/></svg>', x: '96%', y: '52%', size: 28, rotate: 8, section: 0 },
+  { svg: '<svg viewBox="0 0 30 40" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M15 4 C15 4 4 18 4 25 C4 32 9 36 15 36 C21 36 26 32 26 25 C26 18 15 4 15 4Z" stroke="currentColor" stroke-width="0.8" opacity="0.3"/></svg>', x: '4%', y: '38%', size: 22, rotate: -12, section: 4 },
+  { svg: '<svg viewBox="0 0 50 50" fill="none" xmlns="http://www.w3.org/2000/svg"><circle cx="25" cy="25" r="18" stroke="currentColor" stroke-width="0.6" opacity="0.25"/><circle cx="25" cy="25" r="10" stroke="currentColor" stroke-width="0.5" opacity="0.2"/><circle cx="25" cy="25" r="3" stroke="currentColor" stroke-width="0.4" opacity="0.2"/><line x1="25" y1="2" x2="25" y2="14" stroke="currentColor" stroke-width="0.5" opacity="0.2"/><line x1="25" y1="36" x2="25" y2="48" stroke="currentColor" stroke-width="0.5" opacity="0.2"/><line x1="2" y1="25" x2="14" y2="25" stroke="currentColor" stroke-width="0.5" opacity="0.2"/><line x1="36" y1="25" x2="48" y2="25" stroke="currentColor" stroke-width="0.5" opacity="0.2"/></svg>', x: '7%', y: '10%', size: 60, rotate: 0, section: 3 },
+  { svg: '<svg viewBox="0 0 60 30" fill="none" xmlns="http://www.w3.org/2000/svg"><circle cx="12" cy="15" r="8" stroke="currentColor" stroke-width="0.8" opacity="0.3"/><circle cx="12" cy="15" r="3" stroke="currentColor" stroke-width="0.5" opacity="0.2"/><line x1="20" y1="15" x2="52" y2="15" stroke="currentColor" stroke-width="0.8" opacity="0.3"/><line x1="45" y1="15" x2="45" y2="22" stroke="currentColor" stroke-width="0.7" opacity="0.25"/><line x1="50" y1="15" x2="50" y2="20" stroke="currentColor" stroke-width="0.7" opacity="0.25"/></svg>', x: '85%', y: '78%', size: 55, rotate: 25, section: 4 },
+  { svg: '<svg viewBox="0 0 60 35" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M4 17.5 C4 17.5 15 4 30 4 C45 4 56 17.5 56 17.5 C56 17.5 45 31 30 31 C15 31 4 17.5 4 17.5Z" stroke="currentColor" stroke-width="0.8" opacity="0.3"/><circle cx="30" cy="17.5" r="7" stroke="currentColor" stroke-width="0.6" opacity="0.25"/><circle cx="30" cy="17.5" r="3" fill="currentColor" opacity="0.15"/></svg>', x: '92%', y: '8%', size: 50, rotate: -5, section: 5 },
 ];
 
+/* ═══════════ OPTIMIZED: single scroll listener for all objects ═══════════ */
 function DetectiveScrollObjects() {
-  return (
-    <div className="fixed inset-0 pointer-events-none z-[1] overflow-hidden hidden lg:block">
-      {DETECTIVE_OBJECTS.map((obj, i) => (
-        <DetectiveObject key={i} obj={obj} index={i} />
-      ))}
-    </div>
-  );
-}
-
-function DetectiveObject({ obj, index }: { obj: typeof DETECTIVE_OBJECTS[0]; index: number }) {
-  const ref = useRef(null);
-  const [visible, setVisible] = useState(false);
+  const [visibleSections, setVisibleSections] = useState<Set<number>>(new Set());
 
   useEffect(() => {
     const handleScroll = () => {
       const scrollY = window.scrollY;
       const vh = window.innerHeight;
-      // Each section ~1 viewport height; stagger appearance
-      const sectionStart = obj.section * vh * 0.9;
-      const sectionEnd = sectionStart + vh * 1.5;
-      const inRange = scrollY >= sectionStart - vh * 0.3 && scrollY <= sectionEnd;
-      setVisible(inRange);
+      const newVisible = new Set<number>();
+      for (let s = 0; s <= 5; s++) {
+        const sectionStart = s * vh * 0.9;
+        const sectionEnd = sectionStart + vh * 1.5;
+        if (scrollY >= sectionStart - vh * 0.3 && scrollY <= sectionEnd) {
+          newVisible.add(s);
+        }
+      }
+      setVisibleSections(newVisible);
     };
 
     window.addEventListener('scroll', handleScroll, { passive: true });
     handleScroll();
     return () => window.removeEventListener('scroll', handleScroll);
-  }, [obj.section]);
+  }, []);
 
   return (
-    <motion.div
-      ref={ref}
-      initial={{ opacity: 0, scale: 0.5 }}
-      animate={visible ? { opacity: 1, scale: 1 } : { opacity: 0, scale: 0.5 }}
-      transition={{ duration: 1.2, delay: index * 0.05, ease: [0.22, 1, 0.36, 1] }}
-      className="absolute"
-      style={{
-        left: obj.x, top: obj.y,
-        width: obj.size, height: obj.size,
-        transform: `rotate(${obj.rotate}deg)`,
-        color: GOLD_DIM,
-      }}
-      dangerouslySetInnerHTML={{ __html: obj.svg }}
-    />
+    <div className="fixed inset-0 pointer-events-none z-[1] overflow-hidden hidden lg:block">
+      {DETECTIVE_OBJECTS.map((obj, i) => (
+        <motion.div
+          key={i}
+          initial={{ opacity: 0, scale: 0.5 }}
+          animate={visibleSections.has(obj.section) ? { opacity: 1, scale: 1 } : { opacity: 0, scale: 0.5 }}
+          transition={{ duration: 1.2, delay: i * 0.05, ease: [0.22, 1, 0.36, 1] }}
+          className="absolute"
+          style={{
+            left: obj.x, top: obj.y,
+            width: obj.size, height: obj.size,
+            transform: `rotate(${obj.rotate}deg)`,
+            color: GOLD_DIM,
+          }}
+          dangerouslySetInnerHTML={{ __html: obj.svg }}
+        />
+      ))}
+    </div>
   );
 }
-
 /* ═══════════════════ SCROLL REVEAL ═══════════════════ */
 function SR({ children, className = '', delay = 0, direction = 'up' }: {
   children: React.ReactNode; className?: string; delay?: number;
@@ -367,34 +347,40 @@ function MonitorFrame({ src, alt, stamp }: { src: string; alt: string; stamp?: s
   );
 }
 
-/* ═══════════════════ MAGNIFIER FRAME (for board) ═══════════════════ */
+/* ═══════════════════ MAGNIFIER FRAME — ref-based, zero rerenders ═══════════════════ */
 function MagnifierFrame({ src, alt, stamp }: { src: string; alt: string; stamp?: string }) {
   const containerRef = useRef<HTMLDivElement>(null);
   const imgRef = useRef<HTMLImageElement>(null);
-  const [hovering, setHovering] = useState(false);
-  const [pos, setPos] = useState({ x: 0, y: 0, bgX: 0, bgY: 0 });
+  const lensRef = useRef<HTMLDivElement>(null);
   const LENS_SIZE = 160;
   const ZOOM = 2;
 
   const onMouseMove = useCallback((e: React.MouseEvent) => {
-    if (!containerRef.current || !imgRef.current) return;
+    if (!containerRef.current || !imgRef.current || !lensRef.current) return;
     const rect = imgRef.current.getBoundingClientRect();
     const x = e.clientX - rect.left;
     const y = e.clientY - rect.top;
-    // Clamp within image bounds
+
     if (x < 0 || y < 0 || x > rect.width || y > rect.height) {
-      setHovering(false);
+      lensRef.current.style.opacity = '0';
       return;
     }
-    setHovering(true);
-    // Background position for zoomed view
+
+    const containerRect = containerRef.current.getBoundingClientRect();
+    const lensX = e.clientX - containerRect.left - LENS_SIZE / 2;
+    const lensY = e.clientY - containerRect.top - LENS_SIZE / 2;
     const bgX = (x / rect.width) * 100;
     const bgY = (y / rect.height) * 100;
-    setPos({
-      x: e.clientX - containerRef.current.getBoundingClientRect().left,
-      y: e.clientY - containerRef.current.getBoundingClientRect().top,
-      bgX, bgY,
-    });
+
+    const lens = lensRef.current;
+    lens.style.opacity = '1';
+    lens.style.left = `${lensX}px`;
+    lens.style.top = `${lensY}px`;
+    lens.style.backgroundPosition = `${bgX}% ${bgY}%`;
+  }, []);
+
+  const onMouseLeave = useCallback(() => {
+    if (lensRef.current) lensRef.current.style.opacity = '0';
   }, []);
 
   return (
@@ -422,40 +408,35 @@ function MagnifierFrame({ src, alt, stamp }: { src: string; alt: string; stamp?:
         </div>
         <div className="relative overflow-hidden"
           onMouseMove={onMouseMove}
-          onMouseLeave={() => setHovering(false)}
+          onMouseLeave={onMouseLeave}
           style={{ cursor: 'none' }}>
           <img ref={imgRef} src={src} alt={alt} loading="lazy"
             className="w-full block transition-transform duration-700 group-hover:scale-[1.005]" />
 
-          {/* Magnifier lens */}
-          {hovering && (
-            <div className="absolute pointer-events-none z-30"
+          <div ref={lensRef}
+            className="absolute pointer-events-none z-30"
+            style={{
+              width: LENS_SIZE,
+              height: LENS_SIZE,
+              borderRadius: '50%',
+              border: `2px solid ${GOLD}50`,
+              boxShadow: `0 0 30px rgba(212,165,70,0.15), 0 0 60px rgba(0,0,0,0.6), inset 0 0 20px rgba(0,0,0,0.3)`,
+              backgroundImage: `url(${src})`,
+              backgroundSize: `${ZOOM * 100}% ${ZOOM * 100}%`,
+              backgroundRepeat: 'no-repeat',
+              opacity: 0,
+              transition: 'opacity 0.15s ease',
+              willChange: 'left, top, background-position',
+            }}>
+            <div className="absolute inset-0 rounded-full"
               style={{
-                left: pos.x - LENS_SIZE / 2,
-                top: pos.y - LENS_SIZE / 2,
-                width: LENS_SIZE,
-                height: LENS_SIZE,
-                borderRadius: '50%',
-                border: `2px solid ${GOLD}50`,
-                boxShadow: `0 0 30px rgba(212,165,70,0.15), 0 0 60px rgba(0,0,0,0.6), inset 0 0 20px rgba(0,0,0,0.3)`,
-                backgroundImage: `url(${src})`,
-                backgroundSize: `${ZOOM * 100}% ${ZOOM * 100}%`,
-                backgroundPosition: `${pos.bgX}% ${pos.bgY}%`,
-                backgroundRepeat: 'no-repeat',
-                transition: 'left 0.05s, top 0.05s',
-              }}>
-              {/* Lens reflection */}
-              <div className="absolute inset-0 rounded-full"
-                style={{
-                  background: 'linear-gradient(135deg, rgba(255,255,255,0.08) 0%, transparent 50%, rgba(0,0,0,0.15) 100%)',
-                }} />
-              {/* Crosshair inside lens */}
-              <div className="absolute top-1/2 left-0 right-0 h-[0.5px] -translate-y-1/2"
-                style={{ backgroundColor: `${GOLD}20` }} />
-              <div className="absolute left-1/2 top-0 bottom-0 w-[0.5px] -translate-x-1/2"
-                style={{ backgroundColor: `${GOLD}20` }} />
-            </div>
-          )}
+                background: 'linear-gradient(135deg, rgba(255,255,255,0.08) 0%, transparent 50%, rgba(0,0,0,0.15) 100%)',
+              }} />
+            <div className="absolute top-1/2 left-0 right-0 h-[0.5px] -translate-y-1/2"
+              style={{ backgroundColor: `${GOLD}20` }} />
+            <div className="absolute left-1/2 top-0 bottom-0 w-[0.5px] -translate-x-1/2"
+              style={{ backgroundColor: `${GOLD}20` }} />
+          </div>
 
           <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-700 pointer-events-none"
             style={{ boxShadow: `inset 0 0 100px ${GOLD}08` }} />
@@ -551,33 +532,28 @@ function CrimeTape({ text = 'УЛИКИ · ДЕЛО №001 · СЕКРЕТНО' 
   );
 }
 
-/* ═══════════════════ STATIC HERO IMAGE (no parallax scroll) ═══════════════════ */
+/* ═══════════════════ HERO IMAGE — shifted right, seamless blend ═══════════════════ */
 function HeroImage() {
   return (
     <div className="absolute top-0 bottom-0 hidden md:block"
-      style={{ right: '-10px', width: '55%' }}>
+      style={{ right: '-20px', width: '55%' }}>
       <img src={`${R2}/photo_2026-02-16_12-23-44.jpg`} alt=""
         className="absolute inset-0 w-full h-full object-cover"
         style={{ filter: 'contrast(1.15) saturate(0.7) brightness(0.55)', objectPosition: '80% 20%' }} />
-      {/* Left fade — seamless blend */}
       <div className="absolute inset-0"
-        style={{ background: `linear-gradient(to right, ${DARK} 0%, rgba(7,7,10,0.92) 10%, rgba(7,7,10,0.5) 30%, rgba(7,7,10,0.1) 50%, transparent 70%)` }} />
-      {/* Bottom fade */}
+        style={{ background: `linear-gradient(to right, ${DARK} 0%, ${DARK} 5%, rgba(7,7,10,0.97) 12%, rgba(7,7,10,0.88) 22%, rgba(7,7,10,0.65) 35%, rgba(7,7,10,0.35) 48%, rgba(7,7,10,0.12) 62%, transparent 80%)` }} />
       <div className="absolute bottom-0 left-0 right-0 h-[40%]"
         style={{ background: `linear-gradient(to top, ${DARK} 0%, transparent 100%)` }} />
-      {/* Top fade */}
       <div className="absolute top-0 left-0 right-0 h-32"
         style={{ background: `linear-gradient(to bottom, ${DARK} 0%, transparent 100%)` }} />
-      {/* Color grade */}
       <div className="absolute inset-0"
         style={{ background: 'linear-gradient(180deg, rgba(15,12,8,0.3) 0%, rgba(7,7,10,0.15) 50%, rgba(7,7,10,0.4) 100%)' }} />
-      {/* Vignette */}
       <div className="absolute inset-0" style={{ boxShadow: 'inset 0 0 150px rgba(0,0,0,0.5)' }} />
     </div>
   );
 }
 
-/* ═══════════════════ FLASHLIGHT CURSOR (directional cone) ═══════════════════ */
+/* ═══════════════════ FLASHLIGHT CURSOR — directional cone ═══════════════════ */
 function FlashlightCursor() {
   const cursorX = useMotionValue(-100);
   const cursorY = useMotionValue(-100);
@@ -595,31 +571,33 @@ function FlashlightCursor() {
 
   return (
     <>
-      {/* Main flashlight cone — brighter, more directional */}
       <motion.div className="fixed top-0 left-0 z-[9998] pointer-events-none hidden lg:block"
         style={{
           x: springX, y: springY,
           translateX: '-50%', translateY: '-50%',
-          width: 600, height: 600,
-          background: `radial-gradient(ellipse 40% 45% at 50% 48%, rgba(255,235,180,0.07) 0%, rgba(212,165,70,0.04) 25%, rgba(212,165,70,0.015) 50%, transparent 75%)`,
+          width: 650, height: 650,
+          background: 'radial-gradient(ellipse 38% 42% at 50% 48%, rgba(255,235,180,0.09) 0%, rgba(212,165,70,0.06) 20%, rgba(212,165,70,0.025) 40%, rgba(212,165,70,0.008) 60%, transparent 80%)',
         }} />
-      {/* Inner bright spot */}
       <motion.div className="fixed top-0 left-0 z-[9998] pointer-events-none hidden lg:block"
         style={{
           x: springX, y: springY,
           translateX: '-50%', translateY: '-50%',
-          width: 200, height: 200,
-          background: 'radial-gradient(circle, rgba(255,240,200,0.06) 0%, rgba(212,165,70,0.03) 40%, transparent 70%)',
+          width: 300, height: 300,
+          background: 'radial-gradient(ellipse 50% 55% at 50% 50%, rgba(255,240,200,0.08) 0%, rgba(212,165,70,0.04) 35%, transparent 70%)',
         }} />
-      {/* Crosshair cursor */}
+      <motion.div className="fixed top-0 left-0 z-[9998] pointer-events-none hidden lg:block"
+        style={{
+          x: springX, y: springY,
+          translateX: '-50%', translateY: '-50%',
+          width: 120, height: 120,
+          background: 'radial-gradient(circle, rgba(255,245,215,0.1) 0%, rgba(255,235,180,0.05) 40%, transparent 70%)',
+        }} />
       <motion.div className="fixed top-0 left-0 z-[10000] pointer-events-none hidden lg:block"
         style={{ x: springX, y: springY, translateX: '-50%', translateY: '-50%' }}>
-        {/* Outer ring */}
         <motion.div className="rounded-full"
           style={{ width: 10, height: 10, border: `1.5px solid ${GOLD}50`, backgroundColor: `${GOLD}08` }}
           animate={{ scale: [1, 1.15, 1] }}
           transition={{ duration: 2.5, repeat: Infinity, ease: 'easeInOut' }} />
-        {/* Crosshair lines */}
         <div className="absolute -translate-x-1/2 -translate-y-1/2 top-1/2 left-1/2">
           <div className="absolute w-[1px] h-4 -top-6 left-1/2 -translate-x-1/2" style={{ background: `linear-gradient(to bottom, transparent, ${GOLD}30)` }} />
           <div className="absolute w-[1px] h-4 -bottom-[-3px] left-1/2 -translate-x-1/2" style={{ background: `linear-gradient(to top, transparent, ${GOLD}30)` }} />
@@ -639,7 +617,6 @@ function ScanLine() {
     </div>
   );
 }
-
 /* ════════════════════════════════════════════════
    MAIN
    ════════════════════════════════════════════════ */
@@ -674,11 +651,8 @@ export default function PublicLandingPage() {
       <section className="relative min-h-screen flex items-center overflow-hidden">
         <div className="absolute inset-0">
           <div className="absolute inset-0" style={{ background: DARK }} />
-
-          {/* Static hero image — NO scroll animation, shifted 10px right */}
           <HeroImage />
 
-          {/* Mobile */}
           <div className="absolute inset-0 md:hidden">
             <img src={`${R2}/photo_2026-02-16_12-23-44.jpg`} alt=""
               className="absolute inset-0 w-full h-full object-cover"
@@ -686,7 +660,6 @@ export default function PublicLandingPage() {
             <div className="absolute inset-0" style={{ background: 'rgba(7,7,10,0.7)' }} />
           </div>
 
-          {/* Ambient glows */}
           <div className="absolute inset-0 bg-[radial-gradient(circle_at_25%_50%,_rgba(160,115,40,0.04)_0%,_transparent_40%)]" />
           <div className="absolute inset-0 bg-[radial-gradient(circle_at_70%_30%,_rgba(160,115,40,0.05)_0%,_transparent_50%)]" />
           <div className="absolute inset-0 bg-[radial-gradient(ellipse_80%_50%_at_50%_100%,_rgba(10,8,4,0.8)_0%,_transparent_60%)]" />
@@ -696,11 +669,9 @@ export default function PublicLandingPage() {
           <ScanLine />
         </div>
 
-        {/* Content */}
         <div className="relative z-10 max-w-7xl mx-auto px-6 sm:px-10 w-full">
           <div className="max-w-xl lg:max-w-[600px]">
 
-            {/* Badge */}
             <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.8, delay: 0.3 }} className="mb-8">
               <span className="inline-flex items-center gap-2.5 text-[10px] uppercase tracking-[0.35em] px-4 py-2 border classified-glow"
@@ -711,7 +682,6 @@ export default function PublicLandingPage() {
               </span>
             </motion.div>
 
-            {/* Title */}
             <motion.h1 initial={{ opacity: 0 }} animate={{ opacity: 1 }}
               transition={{ duration: 0.5, delay: 0.4 }} className="mb-3">
               <motion.span
@@ -727,7 +697,7 @@ export default function PublicLandingPage() {
                 initial={{ opacity: 0, y: 50, rotateX: 30 }}
                 animate={{ opacity: 1, y: 0, rotateX: 0 }}
                 transition={{ duration: 1.2, delay: 0.7, ease: [0.22, 1, 0.36, 1] }}
-                className="block text-[3.5rem] sm:text-[4.5rem] md:text-[5.5rem] lg:text-[6.5rem] leading-[0.88] tracking-tight mt-1"
+                className="block text-[3rem] sm:text-[4rem] md:text-[5rem] lg:text-[5.875rem] leading-[0.88] tracking-tight mt-1"
                 style={{ fontFamily: "'Playfair Display', serif",
                   background: `linear-gradient(135deg, ${GOLD_BRIGHT} 0%, ${GOLD} 50%, ${GOLD_DIM} 100%)`,
                   WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>
@@ -735,13 +705,11 @@ export default function PublicLandingPage() {
               </motion.span>
             </motion.h1>
 
-            {/* Decorative line */}
             <motion.div initial={{ scaleX: 0, opacity: 0 }} animate={{ scaleX: 1, opacity: 1 }}
               transition={{ duration: 1.2, delay: 0.9 }}
               className="h-[2px] w-20 sm:w-28 origin-left mb-7"
               style={{ background: `linear-gradient(90deg, ${GOLD}, ${GOLD}40, transparent)` }} />
 
-            {/* Typewriter */}
             <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}
               transition={{ delay: 0.9 }} className="mb-6 min-h-[2rem]">
               <p className="text-base sm:text-lg italic"
@@ -754,7 +722,6 @@ export default function PublicLandingPage() {
               </p>
             </motion.div>
 
-            {/* Desc */}
             <motion.p initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 2.5, duration: 0.6 }}
               className="text-[15px] sm:text-base mb-10 max-w-md leading-relaxed"
@@ -762,7 +729,6 @@ export default function PublicLandingPage() {
               Допрашивай AI-подозреваемых, собирай улики на интерактивной доске и раскрой дело, которое поставило полицию в тупик.
             </motion.p>
 
-            {/* CTA */}
             <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 2.8, duration: 0.6 }}
               className="flex flex-col sm:flex-row items-start gap-4">
@@ -774,7 +740,6 @@ export default function PublicLandingPage() {
           </div>
         </div>
 
-        {/* Scroll */}
         <motion.div className="absolute bottom-8 left-1/2 -translate-x-1/2 z-10 flex flex-col items-center gap-2"
           animate={{ y: [0, 8, 0], opacity: scrolled ? 0 : 1 }}
           transition={{ y: { duration: 2.5, repeat: Infinity, ease: 'easeInOut' }, opacity: { duration: 0.4 } }}>
@@ -824,7 +789,6 @@ export default function PublicLandingPage() {
         </div>
       </section>
 
-      {/* ═══════ MICRO CTA ═══════ */}
       <section className="py-8 px-6">
         <SR className="text-center">
           <Magnetic>
@@ -1024,14 +988,13 @@ export default function PublicLandingPage() {
       <section className="relative py-32 sm:py-40 px-6 text-center overflow-hidden">
         <div className="absolute inset-0 bg-[radial-gradient(ellipse_50%_35%_at_50%_50%,_rgba(212,165,70,0.04)_0%,_transparent_70%)]" />
 
-        {/* Rotating light rays */}
         <div className="absolute inset-0 pointer-events-none overflow-hidden">
           <motion.div
             animate={{ rotate: [0, 360] }}
             transition={{ duration: 120, repeat: Infinity, ease: 'linear' }}
             className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[800px] h-[800px]"
             style={{
-              background: `conic-gradient(from 0deg, transparent 0%, rgba(212,165,70,0.02) 5%, transparent 10%, transparent 25%, rgba(212,165,70,0.015) 30%, transparent 35%, transparent 50%, rgba(212,165,70,0.02) 55%, transparent 60%, transparent 75%, rgba(212,165,70,0.015) 80%, transparent 85%)`,
+              background: 'conic-gradient(from 0deg, transparent 0%, rgba(212,165,70,0.02) 5%, transparent 10%, transparent 25%, rgba(212,165,70,0.015) 30%, transparent 35%, transparent 50%, rgba(212,165,70,0.02) 55%, transparent 60%, transparent 75%, rgba(212,165,70,0.015) 80%, transparent 85%)',
             }} />
         </div>
 
@@ -1104,7 +1067,10 @@ export default function PublicLandingPage() {
         }
 
         @keyframes marquee-slide { 0% { transform: translateX(0); } 100% { transform: translateX(-50%); } }
-        .marquee-track { animation: marquee-slide 60s linear infinite; }
+        .marquee-track {
+          animation: marquee-slide 60s linear infinite;
+          will-change: transform;
+        }
         .marquee-track:hover { animation-play-state: paused; }
 
         @keyframes dust-drift {

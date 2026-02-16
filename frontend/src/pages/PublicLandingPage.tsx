@@ -261,38 +261,45 @@ export default function PublicLandingPage() {
 
       {/* ═══════ HERO ═══════ */}
       <section className="relative min-h-screen flex items-center overflow-hidden">
-        <div className="absolute inset-0" style={{ willChange: 'auto', transform: 'translateZ(0)' }}>
-          {/* Detective photo — cinematic full bleed */}
-          <div className="absolute inset-0">
+        <div className="absolute inset-0">
+          {/* Dark base */}
+          <div className="absolute inset-0" style={{ background: '#07070a' }} />
+
+          {/* Detective photo — RIGHT HALF ONLY */}
+          <div className="absolute top-0 right-0 bottom-0 w-[65%] hidden md:block">
             <img src={`${R2}/photo_2026-02-16_12-23-44.jpg`} alt=""
               className="absolute inset-0 w-full h-full object-cover"
-              style={{ filter: 'contrast(1.15) saturate(0.65) brightness(0.5)', objectPosition: '85% 15%', willChange: 'auto' }} />
+              style={{ filter: 'contrast(1.15) saturate(0.7) brightness(0.55)', objectPosition: 'center 20%' }} />
 
-            {/* Cinematic color grade — warm amber tones matching the photo */}
+            {/* Left fade — seamless blend into dark background */}
             <div className="absolute inset-0"
-              style={{ background: 'linear-gradient(135deg, rgba(12,10,6,0.88) 0%, rgba(12,10,6,0.55) 35%, rgba(8,7,5,0.25) 55%, rgba(7,7,10,0.65) 100%)' }} />
+              style={{ background: 'linear-gradient(to right, #07070a 0%, rgba(7,7,10,0.85) 15%, rgba(7,7,10,0.3) 40%, transparent 60%)' }} />
 
-            {/* Left text area protection — strong enough to read text */}
+            {/* Bottom fade */}
+            <div className="absolute bottom-0 left-0 right-0 h-[35%]"
+              style={{ background: 'linear-gradient(to top, #07070a 0%, transparent 100%)' }} />
+
+            {/* Top fade */}
+            <div className="absolute top-0 left-0 right-0 h-28"
+              style={{ background: 'linear-gradient(to bottom, #07070a 0%, transparent 100%)' }} />
+
+            {/* Color grade overlay */}
             <div className="absolute inset-0"
-              style={{ background: 'linear-gradient(to right, rgba(7,7,10,0.95) 0%, rgba(7,7,10,0.8) 25%, rgba(7,7,10,0.3) 50%, transparent 65%)' }} />
-
-            {/* Bottom seamless blend into page bg */}
-            <div className="absolute bottom-0 left-0 right-0 h-[40%]"
-              style={{ background: 'linear-gradient(to top, #07070a 0%, #07070a90 50%, transparent 100%)' }} />
-
-            {/* Top soft vignette */}
-            <div className="absolute top-0 left-0 right-0 h-40"
-              style={{ background: 'linear-gradient(to bottom, rgba(7,7,10,0.4), transparent)' }} />
+              style={{ background: 'linear-gradient(180deg, rgba(15,12,8,0.3) 0%, rgba(7,7,10,0.15) 50%, rgba(7,7,10,0.4) 100%)' }} />
           </div>
 
-          {/* Warm ambient glow behind detective */}
-          <div className="absolute inset-0 bg-[radial-gradient(circle_at_80%_40%,_rgba(140,100,35,0.07)_0%,_transparent_55%)]" />
+          {/* Mobile — faded background */}
+          <div className="absolute inset-0 md:hidden">
+            <img src={`${R2}/photo_2026-02-16_12-23-44.jpg`} alt=""
+              className="absolute inset-0 w-full h-full object-cover"
+              style={{ filter: 'brightness(0.25) saturate(0.5)', objectPosition: 'center 20%' }} />
+            <div className="absolute inset-0" style={{ background: 'rgba(7,7,10,0.7)' }} />
+          </div>
+
+          {/* Warm ambient glow */}
+          <div className="absolute inset-0 bg-[radial-gradient(circle_at_70%_40%,_rgba(160,115,40,0.06)_0%,_transparent_50%)]" />
 
           <FloatingParticles />
-
-          {/* Film grain — lightweight CSS noise */}
-          <div className="absolute inset-0 opacity-[0.02]"
-            style={{ backgroundImage: 'url("data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAADIAAAAyBAMAAADsEZWCAAAAElBMVEUAAAD///////////////////8+Mn5OAAAABnRSTlMDCBEaJzP/8kwaAAAASklEQVQ4y2NgGAWjYBSQD5hYGBj+M7AwMDAz/GdgYGT4z8zAwMr4n4GBmfE/EwMDCxMDAxsLAwM7MwMDBwsDAycrAwMXOwMDAACdDwz/clp/ygAAAABJRU5ErkJggg==")' }} />
         </div>
 
         {/* Content */}

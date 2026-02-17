@@ -55,16 +55,27 @@ if IMAGES_DIR.exists():
     app.mount("/images", StaticFiles(directory=str(IMAGES_DIR)), name="images")
 
 # 3. Frontend static assets (js, css, etc.)
-if FRONTEND_DIST.exists():
+if (FRONTEND_DIST / "assets").exists():
     app.mount("/assets", StaticFiles(directory=str(FRONTEND_DIST / "assets")), name="frontend-assets")
 
 
 # 4. SPA fallback via 404 handler
 #    - /api/* 404s stay as JSON errors
+#    - static files (favicon, manifest) served from dist root
 #    - everything else gets index.html (React Router handles it)
+STATIC_EXTENSIONS = {".ico", ".png", ".svg", ".webmanifest", ".json", ".txt", ".xml"}
+
+
 @app.exception_handler(StarletteHTTPException)
 async def spa_fallback(request: Request, exc: StarletteHTTPException):
     if exc.status_code == 404 and not request.url.path.startswith("/api"):
+        # Try serving static file from dist root (favicon, manifest, etc.)
+        path = request.url.path.lstrip("/")
+        if Path(path).suffix in STATIC_EXTENSIONS:
+            static_file = FRONTEND_DIST / path
+            if static_file.exists() and static_file.is_file():
+                return FileResponse(static_file)
+        # SPA fallback — React Router handles the rest
         index = FRONTEND_DIST / "index.html"
         if index.exists():
             return FileResponse(index)

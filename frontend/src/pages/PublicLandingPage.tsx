@@ -244,7 +244,7 @@ function FaqItem({ item, isOpen, onToggle }: { item: typeof FAQ[0]; isOpen: bool
   );
 }
 
-/* ═══════════════════ MONITOR FRAME ═══════════════════ */
+/* ═══════════════════ MONITOR FRAME (STATIC) ═══════════════════ */
 function MonitorFrame({ src, alt, stamp }: { src: string; alt: string; stamp?: string }) {
   return (
     <motion.div
@@ -252,7 +252,7 @@ function MonitorFrame({ src, alt, stamp }: { src: string; alt: string; stamp?: s
       whileInView={{ opacity: 1, y: 0 }}
       viewport={{ once: true }}
       transition={{ duration: 0.8, ease: [0.22, 1, 0.36, 1] }}
-      className="group rounded-2xl overflow-hidden relative"
+      className="rounded-2xl overflow-hidden relative"
       style={{
         background: 'linear-gradient(135deg, rgba(212,165,70,0.08) 0%, rgba(15,15,20,0.9) 40%, rgba(15,15,20,0.95) 100%)',
         padding: '1px',
@@ -270,27 +270,48 @@ function MonitorFrame({ src, alt, stamp }: { src: string; alt: string; stamp?: s
           </div>
         </div>
         <div className="relative overflow-hidden">
-          <img src={src} alt={alt} loading="lazy" className="w-full block transition-transform duration-700 group-hover:scale-[1.02]" />
-          <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-700 pointer-events-none"
-            style={{ boxShadow: `inset 0 0 100px ${GOLD}08` }} />
+          <img src={src} alt={alt} loading="lazy" className="w-full block" />
         </div>
       </div>
     </motion.div>
   );
 }
 
-/* ═══════════════════ BUTTONS ═══════════════════ */
+/* ═══════════════════ BUTTONS (IMPROVED SHINE) ═══════════════════ */
 function GoldButton({ children, onClick, size = 'lg' }: { children: React.ReactNode; onClick: () => void; size?: 'lg' | 'sm' }) {
+  const [hovered, setHovered] = useState(false);
+
   return (
     <Magnetic strength={0.15}>
       <motion.button onClick={onClick}
+        onMouseEnter={() => setHovered(true)}
+        onMouseLeave={() => setHovered(false)}
         whileHover={{ scale: 1.03, boxShadow: '0 15px 50px rgba(212,165,70,0.25), 0 0 80px rgba(212,165,70,0.08)' }}
         whileTap={{ scale: 0.97 }}
-        className={`relative overflow-hidden font-bold uppercase tracking-wider group
+        className={`relative overflow-hidden font-bold uppercase tracking-wider
           ${size === 'lg' ? 'px-10 py-4 text-sm' : 'px-6 py-3 text-xs'}`}
         style={{ backgroundColor: GOLD, color: '#080808', border: `1px solid ${GOLD}`, cursor: 'none' }}>
-        <span className="absolute top-0 left-[-120%] w-[60%] h-full transition-all duration-700 ease-in-out group-hover:left-[150%] pointer-events-none"
-          style={{ background: 'linear-gradient(to right, transparent, rgba(255,255,255,0.7), transparent)', transform: 'skewX(-25deg)' }} />
+        {/* Основной блик */}
+        <motion.span
+          className="absolute top-0 left-0 w-[45%] h-full pointer-events-none"
+          style={{
+            background: 'linear-gradient(105deg, transparent 20%, rgba(255,255,255,0.5) 45%, rgba(255,255,255,0.65) 50%, rgba(255,255,255,0.5) 55%, transparent 80%)',
+            transform: 'skewX(-20deg)',
+          }}
+          initial={{ x: '-130%' }}
+          animate={hovered ? { x: '320%' } : { x: '-130%' }}
+          transition={hovered
+            ? { duration: 0.75, ease: [0.25, 0.1, 0.25, 1] }
+            : { duration: 0 }
+          }
+        />
+        {/* Мягкая подсветка при ховере */}
+        <motion.span
+          className="absolute inset-0 pointer-events-none"
+          style={{ background: 'linear-gradient(180deg, rgba(255,255,255,0.12) 0%, transparent 60%)' }}
+          animate={{ opacity: hovered ? 1 : 0 }}
+          transition={{ duration: 0.35 }}
+        />
         <span className="relative">{children}</span>
       </motion.button>
     </Magnetic>
@@ -298,19 +319,68 @@ function GoldButton({ children, onClick, size = 'lg' }: { children: React.ReactN
 }
 
 function GhostButton({ children, onClick }: { children: React.ReactNode; onClick: () => void }) {
+  const [hovered, setHovered] = useState(false);
+
   return (
     <Magnetic strength={0.15}>
       <motion.button onClick={onClick}
+        onMouseEnter={() => setHovered(true)}
+        onMouseLeave={() => setHovered(false)}
         whileHover={{ scale: 1.03 }} whileTap={{ scale: 0.97 }}
-        className="px-8 py-4 text-sm font-bold uppercase tracking-wider border transition-all duration-300 hover:border-[#d4a546] hover:text-[#d4a546] hover:bg-[rgba(212,165,70,0.04)]"
+        className="relative overflow-hidden px-8 py-4 text-sm font-bold uppercase tracking-wider border transition-colors duration-300 hover:border-[#d4a546] hover:text-[#d4a546] hover:bg-[rgba(212,165,70,0.04)]"
         style={{ borderColor: 'rgba(255,255,255,0.15)', color: '#c8c8d0', cursor: 'none' }}>
-        {children}
+        {/* Блик */}
+        <motion.span
+          className="absolute top-0 left-0 w-[45%] h-full pointer-events-none"
+          style={{
+            background: 'linear-gradient(105deg, transparent 20%, rgba(212,165,70,0.2) 45%, rgba(212,165,70,0.3) 50%, rgba(212,165,70,0.2) 55%, transparent 80%)',
+            transform: 'skewX(-20deg)',
+          }}
+          initial={{ x: '-130%' }}
+          animate={hovered ? { x: '320%' } : { x: '-130%' }}
+          transition={hovered
+            ? { duration: 0.75, ease: [0.25, 0.1, 0.25, 1] }
+            : { duration: 0 }
+          }
+        />
+        <span className="relative">{children}</span>
       </motion.button>
     </Magnetic>
   );
 }
 
-/* ═══════════════════ MARQUEE ═══════════════════ */
+/* Промежуточная CTA-кнопка (между секциями) */
+function InlineCTAButton({ children, onClick }: { children: React.ReactNode; onClick: () => void }) {
+  const [hovered, setHovered] = useState(false);
+
+  return (
+    <Magnetic>
+      <motion.button onClick={onClick}
+        onMouseEnter={() => setHovered(true)}
+        onMouseLeave={() => setHovered(false)}
+        whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.97 }}
+        className="relative overflow-hidden group px-6 py-3 text-xs font-bold uppercase tracking-widest border transition-all duration-400 hover:bg-[rgba(212,165,70,0.06)] hover:border-[#d4a546] hover:text-[#d4a546] hover:shadow-[0_0_30px_rgba(212,165,70,0.08)]"
+        style={{ borderColor: `${GOLD}35`, color: GOLD_DIM, cursor: 'none' }}>
+        <motion.span
+          className="absolute top-0 left-0 w-[45%] h-full pointer-events-none"
+          style={{
+            background: 'linear-gradient(105deg, transparent 20%, rgba(212,165,70,0.15) 45%, rgba(212,165,70,0.25) 50%, rgba(212,165,70,0.15) 55%, transparent 80%)',
+            transform: 'skewX(-20deg)',
+          }}
+          initial={{ x: '-130%' }}
+          animate={hovered ? { x: '320%' } : { x: '-130%' }}
+          transition={hovered
+            ? { duration: 0.75, ease: [0.25, 0.1, 0.25, 1] }
+            : { duration: 0 }
+          }
+        />
+        <span className="relative">{children}</span>
+      </motion.button>
+    </Magnetic>
+  );
+}
+
+/* ═══════════════════ MARQUEE (1.5× FASTER, NON-INTERACTIVE) ═══════════════════ */
 function LocationsMarquee() {
   const all = [...LOCATIONS, ...LOCATIONS];
   return (
@@ -321,9 +391,9 @@ function LocationsMarquee() {
         style={{ background: `linear-gradient(to left, ${DARK}, transparent)` }} />
       <div className="marquee-track flex gap-4">
         {all.map((src, i) => (
-          <div key={i} className="flex-shrink-0 w-[440px] sm:w-[520px] aspect-video rounded-xl overflow-hidden border transition-all duration-500 hover:border-[rgba(212,165,70,0.3)] group"
+          <div key={i} className="flex-shrink-0 w-[440px] sm:w-[520px] aspect-video rounded-xl overflow-hidden border"
             style={{ borderColor: 'rgba(255,255,255,0.06)' }}>
-            <img src={src} alt="" loading="lazy" className="w-full h-full object-cover transition-all duration-700 group-hover:scale-105"
+            <img src={src} alt="" loading="lazy" className="w-full h-full object-cover"
               style={{ filter: 'brightness(0.8) saturate(0.85)' }} />
           </div>
         ))}
@@ -560,14 +630,9 @@ export default function PublicLandingPage() {
 
       <section className="py-8 px-6">
         <SR className="text-center">
-          <Magnetic>
-            <motion.button onClick={goAuth}
-              whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.97 }}
-              className="group px-6 py-3 text-xs font-bold uppercase tracking-widest border transition-all duration-400 hover:bg-[rgba(212,165,70,0.06)] hover:border-[#d4a546] hover:text-[#d4a546] hover:shadow-[0_0_30px_rgba(212,165,70,0.08)]"
-              style={{ borderColor: `${GOLD}35`, color: GOLD_DIM, cursor: 'none' }}>
-              Попробовать бесплатно →
-            </motion.button>
-          </Magnetic>
+          <InlineCTAButton onClick={goAuth}>
+            Попробовать бесплатно →
+          </InlineCTAButton>
         </SR>
       </section>
 
@@ -819,10 +884,9 @@ export default function PublicLandingPage() {
 
         @keyframes marquee-slide { 0% { transform: translateX(0); } 100% { transform: translateX(-50%); } }
         .marquee-track {
-          animation: marquee-slide 60s linear infinite;
+          animation: marquee-slide 40s linear infinite;
           will-change: transform;
         }
-        .marquee-track:hover { animation-play-state: paused; }
 
         .classified-glow { transition: all 0.4s ease; }
         .classified-glow:hover {

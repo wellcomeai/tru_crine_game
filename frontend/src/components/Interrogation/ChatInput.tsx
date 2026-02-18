@@ -25,14 +25,16 @@ export default function ChatInput({ onSend, onShowEvidence, disabled }: ChatInpu
   };
 
   return (
-    <div className="flex items-center gap-2 px-4 py-3 bg-noir-900
+    <div className="flex items-center gap-2 px-3 lg:px-4 py-2.5 lg:py-3 bg-noir-900
                     border-t border-noir-700/30">
       {/* Evidence button */}
       <div className="relative group">
         <button
           onClick={onShowEvidence}
           disabled={disabled}
-          className="flex items-center gap-1.5 px-3 py-2
+          className="flex items-center justify-center gap-1.5
+                     min-w-[44px] min-h-[44px]
+                     px-2 lg:px-3 py-2
                      text-gray-500 hover:text-gold
                      bg-noir-800 hover:bg-noir-700
                      border border-noir-600/50 hover:border-gold/30
@@ -47,16 +49,16 @@ export default function ChatInput({ onSend, onShowEvidence, disabled }: ChatInpu
           </span>
         </button>
 
-        {/* Tooltip */}
+        {/* Tooltip — desktop only */}
         <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2
                         opacity-0 group-hover:opacity-100
                         transition-opacity duration-200
-                        pointer-events-none z-50 whitespace-nowrap">
+                        pointer-events-none z-50 whitespace-nowrap
+                        hidden lg:block">
           <div className="bg-noir-800 text-gray-300 text-[11px]
                           px-3 py-1.5 rounded-lg shadow-xl shadow-black/40
                           border border-noir-500">
             Предъявить улику подозреваемому
-            {/* Arrow */}
             <div className="absolute -bottom-[4px] left-1/2 -translate-x-1/2
                             w-2 h-2 bg-noir-800 border-r border-b
                             border-noir-500 rotate-45" />
@@ -74,10 +76,10 @@ export default function ChatInput({ onSend, onShowEvidence, disabled }: ChatInpu
         placeholder={
           disabled
             ? 'Ожидайте ответа...'
-            : 'Задайте вопрос подозреваемому...'
+            : 'Ваш вопрос...'
         }
         className="flex-1 bg-noir-800 text-gray-200 rounded-lg
-                   px-4 py-2.5
+                   px-3 lg:px-4 py-2.5
                    border border-noir-600/40
                    focus:border-gold/30 focus:outline-none
                    focus:shadow-[0_0_8px_rgba(201,168,76,0.12)]
@@ -92,7 +94,8 @@ export default function ChatInput({ onSend, onShowEvidence, disabled }: ChatInpu
           onClick={handleSend}
           disabled={disabled || !text.trim()}
           className="flex items-center justify-center
-                     w-9 h-9 rounded-lg
+                     min-w-[44px] min-h-[44px]
+                     rounded-lg
                      bg-gold/10 hover:bg-gold/20
                      text-gold hover:text-gold-dim
                      border border-gold/15 hover:border-gold/30
@@ -103,11 +106,12 @@ export default function ChatInput({ onSend, onShowEvidence, disabled }: ChatInpu
           <Send size={16} />
         </button>
 
-        {/* Tooltip */}
+        {/* Tooltip — desktop only */}
         <div className="absolute bottom-full right-0 mb-2
                         opacity-0 group-hover:opacity-100
                         transition-opacity duration-200
-                        pointer-events-none z-50 whitespace-nowrap">
+                        pointer-events-none z-50 whitespace-nowrap
+                        hidden lg:block">
           <div className="bg-noir-800 text-gray-300 text-[11px]
                           px-3 py-1.5 rounded-lg shadow-xl shadow-black/40
                           border border-noir-500">

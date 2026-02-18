@@ -17,7 +17,7 @@ export default function LandingPage() {
   }, [isAuthenticated, navigate]);
 
   return (
-    <div className="min-h-screen bg-noir-900 flex items-center justify-center vignette scanlines relative">
+    <div className="min-h-[100dvh] bg-noir-900 flex items-center justify-center vignette scanlines relative">
       <motion.div
         initial={{ opacity: 0, y: 30 }}
         animate={{ opacity: 1, y: 0 }}

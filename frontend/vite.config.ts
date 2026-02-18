@@ -8,5 +8,16 @@ export default defineConfig({
       '/api': 'http://localhost:8000',
       '/images': 'http://localhost:8000',
     }
+  },
+  build: {
+    rollupOptions: {
+      output: {
+        manualChunks: {
+          'react-flow': ['@xyflow/react'],
+          'framer': ['framer-motion'],
+          'vendor': ['react', 'react-dom', 'react-router-dom'],
+        }
+      }
+    }
   }
 })

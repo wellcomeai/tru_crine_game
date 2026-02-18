@@ -59,10 +59,10 @@ export default function LocationPage() {
 
   return (
     <GameLayout noPadding>
-      <div className="flex flex-col h-[calc(100vh-3.5rem)]">
+      <div className="flex flex-col h-[calc(100dvh-3rem)] lg:h-[calc(100dvh-3.5rem)]">
         {/* Back button + location name — overlay */}
-        <div className="absolute top-[4.5rem] left-[5rem] lg:left-[13.5rem]
-                        z-30 flex items-center gap-3">
+        <div className="absolute top-[3.5rem] lg:top-[4.5rem] left-3 lg:left-[13.5rem]
+                        z-30 flex items-center gap-2 lg:gap-3">
           <button
             onClick={() => navigate(`/game/${sessionId}`)}
             className="flex items-center gap-1.5
@@ -71,15 +71,18 @@ export default function LocationPage() {
                        bg-noir-900/60 backdrop-blur-sm
                        rounded-lg px-3 py-1.5
                        border border-noir-600/30
-                       hover:border-noir-500/50"
+                       hover:border-noir-500/50
+                       min-w-[44px] min-h-[44px]
+                       justify-center"
           >
             <ArrowLeft size={16} />
             <span className="text-xs hidden sm:inline">Назад</span>
           </button>
-          <h2 className="font-serif text-lg text-gold
+          <h2 className="font-serif text-sm lg:text-lg text-gold
                          bg-noir-900/40 backdrop-blur-sm
-                         px-3 py-1 rounded-lg
-                         border border-gold/10">
+                         px-2 lg:px-3 py-1 rounded-lg
+                         border border-gold/10
+                         max-w-[200px] lg:max-w-none truncate">
             {location.name}
           </h2>
         </div>
@@ -126,9 +129,9 @@ export default function LocationPage() {
             <div className="absolute bottom-0 left-0 right-0
                             bg-gradient-to-t from-black/70
                             via-black/30 to-transparent
-                            px-6 pb-4 pt-12 z-10
+                            px-4 lg:px-6 pb-4 pt-12 z-10
                             pointer-events-none">
-              <p className="text-gray-300 text-sm max-w-2xl">
+              <p className="text-gray-300 text-xs lg:text-sm max-w-2xl line-clamp-3 lg:line-clamp-none">
                 {location.description}
               </p>
             </div>

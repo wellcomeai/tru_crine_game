@@ -59,22 +59,23 @@ export default function AccusationPage() {
 
   return (
     <GameLayout>
-      <div className="flex items-center gap-3 mb-6">
+      <div className="flex items-center gap-3 mb-4 lg:mb-6">
         <button
           onClick={() => navigate(`/game/${sessionId}`)}
-          className="text-gray-400 hover:text-gray-200 transition-colors"
+          className="text-gray-400 hover:text-gray-200 transition-colors
+                     min-w-[44px] min-h-[44px] flex items-center justify-center"
         >
           <ArrowLeft size={20} />
         </button>
-        <h2 className="font-serif text-xl text-gold">Предъявление обвинения</h2>
+        <h2 className="font-serif text-lg lg:text-xl text-gold">Предъявление обвинения</h2>
       </div>
 
       {/* Step indicator */}
-      <div className="flex items-center gap-2 mb-8">
+      <div className="flex items-center gap-1.5 lg:gap-2 mb-6 lg:mb-8">
         {[1, 2, 3, 4].map((s) => (
-          <div key={s} className="flex items-center gap-2">
+          <div key={s} className="flex items-center gap-1.5 lg:gap-2">
             <div
-              className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold ${
+              className={`w-7 h-7 lg:w-8 lg:h-8 rounded-full flex items-center justify-center text-xs lg:text-sm font-bold ${
                 s === step
                   ? 'bg-gold text-noir-900'
                   : s < step
@@ -84,7 +85,7 @@ export default function AccusationPage() {
             >
               {s < step ? <Check size={14} /> : s}
             </div>
-            {s < 4 && <div className="w-8 h-0.5 bg-noir-600" />}
+            {s < 4 && <div className="w-6 lg:w-8 h-0.5 bg-noir-600" />}
           </div>
         ))}
       </div>
@@ -107,7 +108,7 @@ export default function AccusationPage() {
                     <button
                       key={char.slug}
                       onClick={() => setAccused(char.slug)}
-                      className={`p-4 rounded-lg border text-left transition-all flex items-center gap-3 ${
+                      className={`p-4 rounded-lg border text-left transition-all flex items-center gap-3 min-h-[44px] ${
                         accused === char.slug
                           ? 'border-gold bg-gold/10'
                           : 'border-noir-600 bg-noir-800 hover:border-noir-500'
@@ -138,8 +139,8 @@ export default function AccusationPage() {
                     </button>
                   ))}
               </div>
-              <div className="mt-6 flex justify-end">
-                <Button onClick={() => setStep(2)} disabled={!accused}>
+              <div className="mt-6 flex flex-col sm:flex-row sm:justify-end gap-2">
+                <Button onClick={() => setStep(2)} disabled={!accused} className="w-full sm:w-auto">
                   Далее <ArrowRight size={16} className="ml-1 inline" />
                 </Button>
               </div>
@@ -161,11 +162,11 @@ export default function AccusationPage() {
                 placeholder="Опишите мотив преступления..."
                 className="w-full h-32 bg-noir-700 text-gray-200 rounded-lg p-4 border border-noir-600 focus:border-gold-dim focus:outline-none resize-none"
               />
-              <div className="mt-6 flex justify-between">
-                <Button variant="ghost" onClick={() => setStep(1)}>
+              <div className="mt-6 flex flex-col-reverse sm:flex-row sm:justify-between gap-2">
+                <Button variant="ghost" onClick={() => setStep(1)} className="w-full sm:w-auto">
                   <ArrowLeft size={16} className="mr-1 inline" /> Назад
                 </Button>
-                <Button onClick={() => setStep(3)} disabled={!motive.trim()}>
+                <Button onClick={() => setStep(3)} disabled={!motive.trim()} className="w-full sm:w-auto">
                   Далее <ArrowRight size={16} className="ml-1 inline" />
                 </Button>
               </div>
@@ -187,11 +188,11 @@ export default function AccusationPage() {
                 placeholder="Опишите метод совершения преступления..."
                 className="w-full h-32 bg-noir-700 text-gray-200 rounded-lg p-4 border border-noir-600 focus:border-gold-dim focus:outline-none resize-none"
               />
-              <div className="mt-6 flex justify-between">
-                <Button variant="ghost" onClick={() => setStep(2)}>
+              <div className="mt-6 flex flex-col-reverse sm:flex-row sm:justify-between gap-2">
+                <Button variant="ghost" onClick={() => setStep(2)} className="w-full sm:w-auto">
                   <ArrowLeft size={16} className="mr-1 inline" /> Назад
                 </Button>
-                <Button onClick={() => setStep(4)} disabled={!method.trim()}>
+                <Button onClick={() => setStep(4)} disabled={!method.trim()} className="w-full sm:w-auto">
                   Далее <ArrowRight size={16} className="ml-1 inline" />
                 </Button>
               </div>
@@ -211,7 +212,7 @@ export default function AccusationPage() {
                 {game.evidence.map((ev) => (
                   <label
                     key={ev.slug}
-                    className={`flex items-center gap-3 p-3 rounded-lg border cursor-pointer transition-all ${
+                    className={`flex items-center gap-3 p-3 rounded-lg border cursor-pointer transition-all min-h-[44px] ${
                       selectedEvidence.includes(ev.slug)
                         ? 'border-gold bg-gold/10'
                         : 'border-noir-600 bg-noir-800 hover:border-noir-500'
@@ -221,7 +222,7 @@ export default function AccusationPage() {
                       type="checkbox"
                       checked={selectedEvidence.includes(ev.slug)}
                       onChange={() => toggleEvidence(ev.slug)}
-                      className="accent-gold"
+                      className="accent-gold w-4 h-4"
                     />
                     <span className="text-sm text-gray-300">{ev.name}</span>
                     {ev.is_key_evidence && (
@@ -232,11 +233,11 @@ export default function AccusationPage() {
                   </label>
                 ))}
               </div>
-              <div className="mt-6 flex justify-between">
-                <Button variant="ghost" onClick={() => setStep(3)}>
+              <div className="mt-6 flex flex-col-reverse sm:flex-row sm:justify-between gap-2">
+                <Button variant="ghost" onClick={() => setStep(3)} className="w-full sm:w-auto">
                   <ArrowLeft size={16} className="mr-1 inline" /> Назад
                 </Button>
-                <Button variant="danger" onClick={handleSubmit} disabled={submitting}>
+                <Button variant="danger" onClick={handleSubmit} disabled={submitting} className="w-full sm:w-auto">
                   {submitting ? (
                     <LoadingSpinner size={18} />
                   ) : (

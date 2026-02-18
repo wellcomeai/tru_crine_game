@@ -13,6 +13,7 @@ import '@xyflow/react/dist/style.css';
 import EvidenceNode from './EvidenceNode';
 import ConnectionLine from './ConnectionLine';
 import { useGameStore } from '../../stores/gameStore';
+import { useMobile } from '../../hooks/useMobile';
 import { toast } from 'sonner';
 
 const CORK_BOARD_URL = 'https://pub-b1e3de631e544c69b0ad6587f740e140.r2.dev/photo_2026-02-16_11-19-32%20%281%29.jpg';
@@ -22,6 +23,7 @@ const edgeTypes = { connection: ConnectionLine };
 
 export default function BoardCanvas() {
   const { evidence, state, connectEvidence, disconnectEvidence } = useGameStore();
+  const { isMobile } = useMobile();
 
   const initialNodes: Node[] = useMemo(() => {
     return evidence.map((ev, i) => ({
@@ -121,15 +123,25 @@ export default function BoardCanvas() {
         edgeTypes={edgeTypes}
         fitView
         className="!bg-transparent"
+        panOnDrag={true}
+        panOnScroll={false}
+        zoomOnPinch={true}
+        zoomOnScroll={!isMobile}
+        zoomOnDoubleClick={true}
+        minZoom={0.3}
+        maxZoom={2}
+        preventScrolling={true}
       >
         <Controls
           className="!bg-[rgba(10,10,15,0.75)] !border-[#c9a84c]/30 !rounded-lg !shadow-lg [&>button]:!bg-transparent [&>button]:!border-[#c9a84c]/20 [&>button]:!text-[#c9a84c] [&>button:hover]:!bg-[#c9a84c]/10"
         />
-        <MiniMap
-          className="!bg-[rgba(10,10,15,0.75)] !border-[#c9a84c]/30 !rounded-lg"
-          nodeColor="#f5f0e8"
-          maskColor="rgba(10, 10, 15, 0.6)"
-        />
+        {!isMobile && (
+          <MiniMap
+            className="!bg-[rgba(10,10,15,0.75)] !border-[#c9a84c]/30 !rounded-lg"
+            nodeColor="#f5f0e8"
+            maskColor="rgba(10, 10, 15, 0.6)"
+          />
+        )}
       </ReactFlow>
     </div>
   );

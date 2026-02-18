@@ -16,11 +16,43 @@ const EMOTION_LABELS: Record<string, string> = {
 
 interface EmotionBadgeProps {
   emotion: string;
+  compact?: boolean;
 }
 
-export default function EmotionBadge({ emotion }: EmotionBadgeProps) {
+export default function EmotionBadge({ emotion, compact }: EmotionBadgeProps) {
   const color = EMOTION_COLORS[emotion] || EMOTION_COLORS.calm;
   const label = EMOTION_LABELS[emotion] || emotion;
+
+  if (compact) {
+    return (
+      <AnimatePresence mode="wait">
+        <motion.div
+          key={emotion}
+          initial={{ opacity: 0, scale: 0.9 }}
+          animate={{ opacity: 1, scale: 1 }}
+          exit={{ opacity: 0, scale: 0.9 }}
+          transition={{ duration: 0.3 }}
+          className="flex items-center gap-1.5 px-2 py-1"
+        >
+          <motion.span
+            className="w-2 h-2 rounded-full flex-shrink-0"
+            style={{ backgroundColor: color }}
+            animate={{
+              boxShadow: [
+                `0 0 4px ${color}`,
+                `0 0 10px ${color}`,
+                `0 0 4px ${color}`,
+              ],
+            }}
+            transition={{ repeat: Infinity, duration: 2 }}
+          />
+          <span className="text-[11px] font-medium whitespace-nowrap" style={{ color }}>
+            {label}
+          </span>
+        </motion.div>
+      </AnimatePresence>
+    );
+  }
 
   return (
     <AnimatePresence mode="wait">

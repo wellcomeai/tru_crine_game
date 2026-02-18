@@ -1,6 +1,7 @@
 import { ReactNode } from 'react';
 import TopBar from './TopBar';
 import Sidebar from './Sidebar';
+import BottomNav from './BottomNav';
 import UnlockNotification from '../Game/UnlockNotification';
 import CaseAboutModal from '../Game/CaseAboutModal';
 import { useGameStore } from '../../stores/gameStore';
@@ -20,14 +21,19 @@ export default function GameLayout({ children, noPadding }: GameLayoutProps) {
   } = useGameStore();
 
   return (
-    <div className="h-screen flex flex-col bg-noir-900">
+    <div className="h-[100dvh] flex flex-col bg-noir-900">
       <TopBar />
       <div className="flex flex-1 overflow-hidden">
         <Sidebar onAboutClick={() => setShowAboutModal(true)} />
-        <main className={`flex-1 overflow-y-auto ${noPadding ? '' : 'p-6'}`}>
+        <main
+          className={`flex-1 overflow-y-auto
+            ${noPadding ? '' : 'p-4 lg:p-6'}
+            ${noPadding ? '' : 'pb-[calc(56px+env(safe-area-inset-bottom,0px))] lg:pb-6'}`}
+        >
           {children}
         </main>
       </div>
+      <BottomNav onAboutClick={() => setShowAboutModal(true)} />
       <UnlockNotification />
 
       {/* "About case" modal — available on all pages */}

@@ -114,3 +114,51 @@ body {
   backdrop-filter: blur(12px);
   border: 1px solid var(--border);
 }
+
+/* ═══ Mobile Adaptation ═══ */
+
+/* Safe areas */
+:root {
+  --sat: env(safe-area-inset-top);
+  --sab: env(safe-area-inset-bottom);
+  --sal: env(safe-area-inset-left);
+  --sar: env(safe-area-inset-right);
+}
+
+/* Dynamic viewport height fix */
+html, body, #root {
+  height: 100%;
+}
+
+/* Prevent overscroll bounce on iOS */
+body {
+  overscroll-behavior: none;
+  -webkit-overflow-scrolling: touch;
+}
+
+/* Input zoom prevention on iOS */
+input, textarea, select {
+  font-size: 16px !important;
+}
+@media (min-width: 1024px) {
+  input, textarea, select {
+    font-size: inherit !important;
+  }
+}
+
+/* Hide scrollbar utility */
+.scrollbar-hide {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+.scrollbar-hide::-webkit-scrollbar {
+  display: none;
+}
+
+/* Reduced motion support */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
+}

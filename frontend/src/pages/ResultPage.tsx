@@ -60,7 +60,7 @@ export default function ResultPage() {
           className="text-center mb-8"
         >
           <h1
-            className={`font-serif text-4xl font-bold mb-2 ${
+            className={`font-serif text-3xl lg:text-4xl font-bold mb-2 ${
               result.is_correct ? 'text-gold' : 'text-blood-bright'
             }`}
           >
@@ -154,7 +154,7 @@ export default function ResultPage() {
         )}
 
         {/* Actions */}
-        <div className="flex gap-4 justify-center">
+        <div className="flex flex-col sm:flex-row gap-3 sm:gap-4 justify-center">
           {!result.is_correct && (
             <Button onClick={() => navigate(`/game/${sessionId}/accuse`)}>
               Попробовать снова

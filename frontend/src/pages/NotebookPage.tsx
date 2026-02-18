@@ -63,7 +63,7 @@ export default function NotebookPage() {
             value={notes}
             onChange={(e) => handleNotesChange(e.target.value)}
             placeholder="Записывайте свои наблюдения..."
-            className="w-full h-80 bg-noir-700 text-gray-300 rounded-lg p-4 border border-noir-600 focus:border-gold-dim focus:outline-none resize-none font-mono text-sm leading-relaxed"
+            className="w-full h-48 lg:h-80 bg-noir-700 text-gray-300 rounded-lg p-4 border border-noir-600 focus:border-gold-dim focus:outline-none resize-none font-mono text-sm leading-relaxed"
           />
           <p className="text-xs text-gray-600 mt-2">Автосохранение</p>
         </div>

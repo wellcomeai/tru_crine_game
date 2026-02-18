@@ -467,13 +467,13 @@ export default function PublicLandingPage() {
   const goAuth = useCallback(() => navigate('/auth'), [navigate]);
 
   return (
-    <div className="min-h-screen text-gray-200 overflow-x-hidden relative" style={{ background: DARK }}>
+    <div className="min-h-[100dvh] text-gray-200 overflow-x-hidden relative" style={{ background: DARK }}>
 
       <CaseProgress />
       <FlashlightCursor />
 
       {/* ═══════ HERO — fullscreen image ═══════ */}
-      <section ref={heroRef} className="relative min-h-screen flex items-center overflow-hidden">
+      <section ref={heroRef} className="relative min-h-[100dvh] flex items-center overflow-hidden">
         {/* Parallax background image */}
         <motion.div className="absolute inset-0" style={{ scale: heroScale, y: heroY }}>
           <img

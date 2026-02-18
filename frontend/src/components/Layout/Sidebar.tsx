@@ -27,8 +27,8 @@ export default function Sidebar({ onAboutClick }: SidebarProps) {
   const evidenceCount = state?.collected_evidence?.length || 0;
 
   return (
-    <div className="w-16 lg:w-48 bg-noir-800 border-r border-noir-600
-                    flex flex-col py-4">
+    <div className="hidden lg:flex w-48 bg-noir-800 border-r border-noir-600
+                    flex-col py-4">
       {menuItems.map((item) => {
         const Icon = item.icon;
         const isActive = 'tab' in item && item.tab === activeTab;

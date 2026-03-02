@@ -2,7 +2,7 @@ import { useEffect, useRef, useState, useCallback, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion, useInView, AnimatePresence, useScroll, useSpring, useMotionValue, useTransform } from 'framer-motion';
 import { useAuthStore } from '../stores/authStore';
-import { ChevronDown, Search, MessageSquare, Network, Scale, Fingerprint } from 'lucide-react';
+import { ChevronDown, Search, MessageSquare, Network, Scale, Fingerprint, Sparkles, Zap, BookOpen, CreditCard, Gift, ShieldCheck } from 'lucide-react';
 
 /* ─────────────────────── PALETTE ─────────────────────── */
 const GOLD = '#d4a546';
@@ -215,10 +215,12 @@ function EmotionCycler() {
 
 /* ═══════════════════ FAQ ═══════════════════ */
 const FAQ = [
-  { q: 'Это бесплатно?', a: 'Первое дело — полностью бесплатно. Вы можете пройти его целиком, включая все допросы, осмотр локаций и финальное обвинение. Дополнительные дела доступны после покупки.' },
+  { q: 'Это бесплатно?', a: 'Первое дело — полностью бесплатно. Вы можете пройти его целиком, включая все допросы, осмотр локаций и финальное обвинение. Дополнительные дела доступны после покупки — без подписок, платите только за те истории, которые хотите пройти.' },
   { q: 'Сколько длится одно дело?', a: 'В среднем от 40 минут до 1,5 часов — зависит от того, насколько тщательно вы изучаете улики и допрашиваете подозреваемых.' },
   { q: 'Как работает AI в игре?', a: 'Каждый подозреваемый управляется продвинутым AI с уникальной личностью, секретами и алиби. Он реагирует на ваши вопросы и предъявленные улики, может нервничать, злиться и быть пойман на лжи.' },
-  { q: 'Можно ли переиграть дело?', a: 'Да. AI генерирует уникальные ответы каждый раз, так что диалоги не будут повторяться.' },
+  { q: 'Откуда берутся новые дела?', a: 'Все детективные истории создаются с помощью AI — от сюжета и персонажей до улик и локаций. Это позволяет выпускать новые уникальные дела регулярно, с разными сеттингами, уровнями сложности и количеством подозреваемых.' },
+  { q: 'Можно ли переиграть дело?', a: 'Да. AI генерирует уникальные ответы каждый раз, так что диалоги не будут повторяться. Вы можете попробовать другую тактику допроса и получить совершенно новый опыт.' },
+  { q: 'Как проходит оплата?', a: 'Безопасная оплата через Robokassa — банковские карты, электронные кошельки, СБП. Доступ к делу открывается мгновенно после оплаты. Никаких подписок — одна покупка = одно дело навсегда.' },
 ];
 
 function FaqItem({ item, isOpen, onToggle }: { item: typeof FAQ[0]; isOpen: boolean; onToggle: () => void }) {
@@ -681,6 +683,68 @@ export default function PublicLandingPage() {
         <SR><LocationsMarquee /></SR>
       </section>
 
+      <CrimeTape text="НОВЫЕ ДЕЛА · AI · БЕСКОНЕЧНЫЕ ИСТОРИИ" />
+
+      {/* ═══════ AI STORY GENERATION ═══════ */}
+      <section className="relative py-24 sm:py-32 px-6">
+        <div className="absolute inset-0 bg-[radial-gradient(ellipse_50%_50%_at_50%_30%,_rgba(212,165,70,0.03)_0%,_transparent_60%)]" />
+        <div className="max-w-6xl mx-auto relative">
+          <SR className="text-center mb-14">
+            <span className="section-label" style={{ color: GOLD_DIM }}>Технология</span>
+            <h2 className="section-title text-center">
+              Новые истории <span style={{ color: GOLD }}>каждую неделю</span>
+            </h2>
+            <p className="section-desc text-center mx-auto" style={{ maxWidth: 620 }}>
+              Каждое дело — уникальный детективный сюжет, созданный с помощью искусственного интеллекта.
+              Новые расследования появляются регулярно, и каждое — совершенно не похоже на предыдущее.
+            </p>
+          </SR>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-5">
+            {[
+              {
+                icon: Sparkles,
+                title: 'AI создаёт сюжеты',
+                desc: 'Искусственный интеллект генерирует детективные истории с уникальными персонажами, мотивами и уликами — от завязки до развязки.',
+                accent: GOLD,
+              },
+              {
+                icon: Zap,
+                title: 'Мгновенная публикация',
+                desc: 'Новое дело от идеи до полностью играбельной истории — за считанные минуты. Никакого ручного программирования.',
+                accent: '#e8a838',
+              },
+              {
+                icon: BookOpen,
+                title: 'Бесконечное разнообразие',
+                desc: 'Убийство на яхте, кража в музее, отравление на банкете — любой сеттинг, любая эпоха, любое количество подозреваемых.',
+                accent: '#c9a84c',
+              },
+            ].map((item, i) => (
+              <SR key={item.title} delay={i * 0.12}>
+                <motion.div
+                  whileHover={{ y: -8, borderColor: item.accent + '40' }}
+                  transition={{ duration: 0.35 }}
+                  className="relative rounded-xl border p-7 h-full group step-card"
+                  style={{ borderColor: 'rgba(255,255,255,0.05)', backgroundColor: 'rgba(12,12,16,0.5)', cursor: 'none' }}>
+                  <div className="absolute inset-0 rounded-xl opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none"
+                    style={{ background: `radial-gradient(circle at 50% 0%, ${item.accent}0c 0%, transparent 70%)` }} />
+                  <div className="mb-5 w-12 h-12 rounded-lg flex items-center justify-center transition-all duration-300 group-hover:shadow-lg"
+                    style={{ backgroundColor: item.accent + '0c', border: `1px solid ${item.accent}15` }}>
+                    <item.icon size={22} style={{ color: item.accent }} strokeWidth={1.5} />
+                  </div>
+                  <h3 className="text-lg font-bold mb-3"
+                    style={{ fontFamily: "'Playfair Display', serif", color: '#e0deda' }}>{item.title}</h3>
+                  <p className="text-sm leading-relaxed" style={{ color: '#666670' }}>{item.desc}</p>
+                  <div className="absolute bottom-0 left-6 right-6 h-px opacity-0 group-hover:opacity-100 transition-opacity duration-500"
+                    style={{ background: `linear-gradient(90deg, transparent, ${item.accent}30, transparent)` }} />
+                </motion.div>
+              </SR>
+            ))}
+          </div>
+        </div>
+      </section>
+
       <CrimeTape text="ХОД РАССЛЕДОВАНИЯ · 4 ЭТАПА · ПРОТОКОЛ" />
 
       {/* ═══════ HOW IT WORKS ═══════ */}
@@ -767,6 +831,97 @@ export default function PublicLandingPage() {
                 </div>
               </SR>
             ))}
+          </div>
+        </div>
+      </section>
+
+      <CrimeTape text="ДОСТУП · ТАРИФЫ · СТАРТ" />
+
+      {/* ═══════ PRICING / MONETIZATION ═══════ */}
+      <section className="relative py-24 sm:py-32 px-6">
+        <div className="absolute inset-0 bg-[radial-gradient(ellipse_60%_40%_at_50%_40%,_rgba(212,165,70,0.025)_0%,_transparent_60%)]" />
+        <div className="max-w-5xl mx-auto relative">
+          <SR className="text-center mb-14">
+            <span className="section-label" style={{ color: GOLD_DIM }}>Как начать</span>
+            <h2 className="section-title text-center">
+              Первое дело — <span style={{ color: GOLD }}>бесплатно</span>
+            </h2>
+            <p className="section-desc text-center mx-auto">
+              Зарегистрируйтесь и начните расследование прямо сейчас. Без подписок — платите только за те дела, которые хотите пройти.
+            </p>
+          </SR>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 max-w-3xl mx-auto">
+            {/* Free tier */}
+            <SR delay={0.05}>
+              <div className="rounded-xl border p-8 h-full relative overflow-hidden step-card"
+                style={{ borderColor: 'rgba(255,255,255,0.08)', backgroundColor: 'rgba(12,12,16,0.5)' }}>
+                <div className="flex items-center gap-3 mb-5">
+                  <div className="w-10 h-10 rounded-lg flex items-center justify-center"
+                    style={{ backgroundColor: '#4a9e6d12', border: '1px solid #4a9e6d20' }}>
+                    <Gift size={20} style={{ color: '#4a9e6d' }} strokeWidth={1.5} />
+                  </div>
+                  <div>
+                    <h3 className="text-lg font-bold" style={{ fontFamily: "'Playfair Display', serif", color: '#e0deda' }}>
+                      Бесплатный старт
+                    </h3>
+                  </div>
+                </div>
+                <div className="mb-5">
+                  <span className="text-3xl font-bold" style={{ color: '#4a9e6d', fontFamily: "'Playfair Display', serif" }}>0 ₽</span>
+                </div>
+                <ul className="space-y-3 mb-6">
+                  {[
+                    'Полное первое дело без ограничений',
+                    'AI-допросы всех подозреваемых',
+                    'Доска улик и заметки',
+                    'Финальное обвинение и оценка',
+                  ].map(t => (
+                    <li key={t} className="flex items-start gap-2.5 text-sm" style={{ color: '#8a8a9a' }}>
+                      <ShieldCheck size={16} className="flex-shrink-0 mt-0.5" style={{ color: '#4a9e6d' }} />
+                      {t}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            </SR>
+
+            {/* Paid tier */}
+            <SR delay={0.15}>
+              <div className="rounded-xl border p-8 h-full relative overflow-hidden step-card"
+                style={{ borderColor: GOLD + '25', backgroundColor: 'rgba(12,12,16,0.5)' }}>
+                <div className="absolute top-0 left-0 right-0 h-px"
+                  style={{ background: `linear-gradient(90deg, transparent, ${GOLD}50, transparent)` }} />
+                <div className="flex items-center gap-3 mb-5">
+                  <div className="w-10 h-10 rounded-lg flex items-center justify-center"
+                    style={{ backgroundColor: GOLD + '0c', border: `1px solid ${GOLD}20` }}>
+                    <CreditCard size={20} style={{ color: GOLD }} strokeWidth={1.5} />
+                  </div>
+                  <div>
+                    <h3 className="text-lg font-bold" style={{ fontFamily: "'Playfair Display', serif", color: '#e0deda' }}>
+                      Новые дела
+                    </h3>
+                  </div>
+                </div>
+                <div className="mb-5">
+                  <span className="text-3xl font-bold" style={{ color: GOLD, fontFamily: "'Playfair Display', serif" }}>от 99 ₽</span>
+                  <span className="text-sm ml-2" style={{ color: '#666' }}>за дело</span>
+                </div>
+                <ul className="space-y-3 mb-6">
+                  {[
+                    'Уникальные AI-сгенерированные сюжеты',
+                    'Разная сложность и длительность',
+                    'Новые дела каждую неделю',
+                    'Безопасная оплата через Robokassa',
+                  ].map(t => (
+                    <li key={t} className="flex items-start gap-2.5 text-sm" style={{ color: '#8a8a9a' }}>
+                      <ShieldCheck size={16} className="flex-shrink-0 mt-0.5" style={{ color: GOLD }} />
+                      {t}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            </SR>
           </div>
         </div>
       </section>
